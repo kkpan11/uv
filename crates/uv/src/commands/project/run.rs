@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::ffi::OsString;
 use std::fmt::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use tokio::process::Command;
@@ -14,35 +14,43 @@ use uv_cache::Cache;
 use uv_cli::ExternalCommand;
 use uv_client::{BaseClientBuilder, Connectivity};
 use uv_configuration::{Concurrency, ExtrasSpecification, PreviewMode};
-use uv_distribution::{VirtualProject, Workspace, WorkspaceError};
-use uv_fs::Simplified;
+use uv_fs::{PythonExt, Simplified, CWD};
 use uv_installer::{SatisfiesResult, SitePackages};
 use uv_normalize::PackageName;
 use uv_python::{
     request_from_version_file, EnvironmentPreference, Interpreter, PythonEnvironment, PythonFetch,
     PythonInstallation, PythonPreference, PythonRequest, VersionRequest,
 };
-
 use uv_requirements::{RequirementsSource, RequirementsSpecification};
 use uv_warnings::warn_user_once;
+use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace, WorkspaceError};
 
+use crate::commands::pip::loggers::{
+    DefaultInstallLogger, DefaultResolveLogger, SummaryInstallLogger, SummaryResolveLogger,
+};
 use crate::commands::pip::operations::Modifications;
 use crate::commands::project::environment::CachedEnvironment;
+use crate::commands::project::{ProjectError, WorkspacePython};
 use crate::commands::reporters::PythonDownloadReporter;
-use crate::commands::{project, ExitStatus, SharedState};
+use crate::commands::{pip, project, ExitStatus, SharedState};
 use crate::printer::Printer;
 use crate::settings::ResolverInstallerSettings;
 
 /// Run a command.
+#[allow(clippy::fn_params_excessive_bools)]
 pub(crate) async fn run(
     command: ExternalCommand,
     requirements: Vec<RequirementsSource>,
+    show_resolution: bool,
+    locked: bool,
+    frozen: bool,
+    isolated: bool,
     package: Option<PackageName>,
+    no_project: bool,
     extras: ExtrasSpecification,
     dev: bool,
     python: Option<String>,
     settings: ResolverInstallerSettings,
-    isolated: bool,
     preview: PreviewMode,
     python_preference: PythonPreference,
     python_fetch: PythonFetch,
@@ -53,7 +61,29 @@ pub(crate) async fn run(
     printer: Printer,
 ) -> Result<ExitStatus> {
     if preview.is_disabled() {
-        warn_user_once!("`uv run` is experimental and may change without warning.");
+        warn_user_once!("`uv run` is experimental and may change without warning");
+    }
+
+    // These cases seem quite complex because (in theory) they should change the "current package".
+    // Let's ban them entirely for now.
+    for source in &requirements {
+        match source {
+            RequirementsSource::PyprojectToml(_) => {
+                bail!("Adding requirements from a `pyproject.toml` is not supported in `uv run`");
+            }
+            RequirementsSource::SetupPy(_) => {
+                bail!("Adding requirements from a `setup.py` is not supported in `uv run`");
+            }
+            RequirementsSource::SetupCfg(_) => {
+                bail!("Adding requirements from a `setup.cfg` is not supported in `uv run`");
+            }
+            RequirementsSource::RequirementsTxt(path) => {
+                if path == Path::new("-") {
+                    bail!("Reading requirements from stdin is not supported in `uv run`");
+                }
+            }
+            _ => {}
+        }
     }
 
     // Parse the input command.
@@ -62,9 +92,11 @@ pub(crate) async fn run(
     // Initialize any shared state.
     let state = SharedState::default();
 
-    let reporter = PythonDownloadReporter::single(printer);
+    // Initialize any output reporters.
+    let download_reporter = PythonDownloadReporter::single(printer);
 
     // Determine whether the command to execute is a PEP 723 script.
+    let temp_dir;
     let script_interpreter = if let RunCommand::Python(target, _) = &command {
         if let Some(metadata) = uv_scripts::read_pep723_metadata(&target).await? {
             writeln!(
@@ -77,7 +109,7 @@ pub(crate) async fn run(
             let python_request = if let Some(request) = python.as_deref() {
                 Some(PythonRequest::parse(request))
                 // (2) Request from `.python-version`
-            } else if let Some(request) = request_from_version_file().await? {
+            } else if let Some(request) = request_from_version_file(&CWD).await? {
                 Some(request)
                 // (3) `Requires-Python` in `pyproject.toml`
             } else {
@@ -97,32 +129,54 @@ pub(crate) async fn run(
                 python_fetch,
                 &client_builder,
                 cache,
-                Some(&reporter),
+                Some(&download_reporter),
             )
             .await?
             .into_interpreter();
 
-            // Install the script requirements.
-            let requirements = metadata
-                .dependencies
-                .into_iter()
-                .map(Requirement::from)
-                .collect();
-            let environment = CachedEnvironment::get_or_create(
-                requirements,
-                interpreter,
-                &settings,
-                &state,
-                preview,
-                connectivity,
-                concurrency,
-                native_tls,
-                cache,
-                printer,
-            )
-            .await?;
+            // Install the script requirements, if necessary. Otherwise, use an isolated environment.
+            if let Some(dependencies) = metadata.dependencies {
+                let requirements = dependencies.into_iter().map(Requirement::from).collect();
+                let spec = RequirementsSpecification::from_requirements(requirements);
+                let environment = CachedEnvironment::get_or_create(
+                    spec,
+                    interpreter,
+                    &settings,
+                    &state,
+                    if show_resolution {
+                        Box::new(DefaultResolveLogger)
+                    } else {
+                        Box::new(SummaryResolveLogger)
+                    },
+                    if show_resolution {
+                        Box::new(DefaultInstallLogger)
+                    } else {
+                        Box::new(SummaryInstallLogger)
+                    },
+                    preview,
+                    connectivity,
+                    concurrency,
+                    native_tls,
+                    cache,
+                    printer,
+                )
+                .await?;
 
-            Some(environment.into_interpreter())
+                Some(environment.into_interpreter())
+            } else {
+                // Create a virtual environment.
+                temp_dir = cache.environment()?;
+                let environment = uv_virtualenv::create_venv(
+                    temp_dir.path(),
+                    interpreter,
+                    uv_virtualenv::Prompt::None,
+                    false,
+                    false,
+                    false,
+                )?;
+
+                Some(environment.into_interpreter())
+            }
         } else {
             None
         }
@@ -131,23 +185,23 @@ pub(crate) async fn run(
     };
 
     // Discover and sync the base environment.
+    let temp_dir;
     let base_interpreter = if let Some(script_interpreter) = script_interpreter {
         Some(script_interpreter)
-    } else if isolated {
-        // package is `None`, isolated and package are marked as conflicting in clap.
-        None
     } else {
-        let project = if let Some(package) = package {
+        let project = if no_project {
+            None
+        } else if let Some(package) = package {
             // We need a workspace, but we don't need to have a current package, we can be e.g. in
             // the root of a virtual workspace and then switch into the selected package.
             Some(VirtualProject::Project(
-                Workspace::discover(&std::env::current_dir()?, None)
+                Workspace::discover(&CWD, &DiscoveryOptions::default())
                     .await?
                     .with_current_project(package.clone())
                     .with_context(|| format!("Package `{package}` not found in workspace"))?,
             ))
         } else {
-            match VirtualProject::discover(&std::env::current_dir()?, None).await {
+            match VirtualProject::discover(&CWD, &DiscoveryOptions::default()).await {
                 Ok(project) => Some(project),
                 Err(WorkspaceError::MissingPyprojectToml) => None,
                 Err(WorkspaceError::NonWorkspace(_)) => None,
@@ -168,28 +222,74 @@ pub(crate) async fn run(
                 );
             }
 
-            let venv = project::get_or_init_environment(
-                project.workspace(),
-                python.as_deref().map(PythonRequest::parse),
-                python_preference,
-                python_fetch,
-                connectivity,
-                native_tls,
-                cache,
-                printer,
-            )
-            .await?;
+            let venv = if isolated {
+                debug!("Creating isolated virtual environment");
 
-            // Read the existing lockfile.
-            let existing = project::lock::read(project.workspace()).await?;
+                // If we're isolating the environment, use an ephemeral virtual environment as the
+                // base environment for the project.
+                let interpreter = {
+                    let client_builder = BaseClientBuilder::new()
+                        .connectivity(connectivity)
+                        .native_tls(native_tls);
 
-            // Lock and sync the environment.
-            let lock = project::lock::do_lock(
+                    // Resolve the Python request and requirement for the workspace.
+                    let WorkspacePython { python_request, .. } = WorkspacePython::from_request(
+                        python.as_deref().map(PythonRequest::parse),
+                        project.workspace(),
+                    )
+                    .await?;
+
+                    // Note we force preview on during `uv run` for now since the entire interface is in preview.
+                    PythonInstallation::find_or_fetch(
+                        python_request,
+                        EnvironmentPreference::Any,
+                        python_preference,
+                        python_fetch,
+                        &client_builder,
+                        cache,
+                        Some(&download_reporter),
+                    )
+                    .await?
+                    .into_interpreter()
+                };
+
+                // Create a virtual environment
+                temp_dir = cache.environment()?;
+                uv_virtualenv::create_venv(
+                    temp_dir.path(),
+                    interpreter,
+                    uv_virtualenv::Prompt::None,
+                    false,
+                    false,
+                    false,
+                )?
+            } else {
+                // If we're not isolating the environment, reuse the base environment for the
+                // project.
+                project::get_or_init_environment(
+                    project.workspace(),
+                    python.as_deref().map(PythonRequest::parse),
+                    python_preference,
+                    python_fetch,
+                    connectivity,
+                    native_tls,
+                    cache,
+                    printer,
+                )
+                .await?
+            };
+
+            let lock = match project::lock::do_safe_lock(
+                locked,
+                frozen,
                 project.workspace(),
                 venv.interpreter(),
-                existing.as_ref(),
                 settings.as_ref().into(),
-                &state,
+                if show_resolution {
+                    Box::new(DefaultResolveLogger)
+                } else {
+                    Box::new(SummaryResolveLogger)
+                },
                 preview,
                 connectivity,
                 concurrency,
@@ -197,21 +297,33 @@ pub(crate) async fn run(
                 cache,
                 printer,
             )
-            .await?;
-
-            if !existing.is_some_and(|existing| existing == lock) {
-                project::lock::commit(&lock, project.workspace()).await?;
-            }
+            .await
+            {
+                Ok(lock) => lock,
+                Err(ProjectError::Operation(pip::operations::Error::Resolve(
+                    uv_resolver::ResolveError::NoSolution(err),
+                ))) => {
+                    let report = miette::Report::msg(format!("{err}")).context(err.header());
+                    anstream::eprint!("{report:?}");
+                    return Ok(ExitStatus::Failure);
+                }
+                Err(err) => return Err(err.into()),
+            };
 
             project::sync::do_sync(
                 &project,
                 &venv,
-                &lock,
-                extras,
+                &lock.lock,
+                &extras,
                 dev,
                 Modifications::Sufficient,
                 settings.as_ref().into(),
                 &state,
+                if show_resolution {
+                    Box::new(DefaultInstallLogger)
+                } else {
+                    Box::new(SummaryInstallLogger)
+                },
                 preview,
                 connectivity,
                 concurrency,
@@ -225,23 +337,43 @@ pub(crate) async fn run(
         } else {
             debug!("No project found; searching for Python interpreter");
 
-            let client_builder = BaseClientBuilder::new()
-                .connectivity(connectivity)
-                .native_tls(native_tls);
+            let interpreter = {
+                let client_builder = BaseClientBuilder::new()
+                    .connectivity(connectivity)
+                    .native_tls(native_tls);
 
-            let python = PythonInstallation::find_or_fetch(
-                python.as_deref().map(PythonRequest::parse),
-                // No opt-in is required for system environments, since we are not mutating it.
-                EnvironmentPreference::Any,
-                python_preference,
-                python_fetch,
-                &client_builder,
-                cache,
-                Some(&reporter),
-            )
-            .await?;
+                let python = PythonInstallation::find_or_fetch(
+                    python.as_deref().map(PythonRequest::parse),
+                    // No opt-in is required for system environments, since we are not mutating it.
+                    EnvironmentPreference::Any,
+                    python_preference,
+                    python_fetch,
+                    &client_builder,
+                    cache,
+                    Some(&download_reporter),
+                )
+                .await?;
 
-            python.into_interpreter()
+                python.into_interpreter()
+            };
+
+            if isolated {
+                debug!("Creating isolated virtual environment");
+
+                // If we're isolating the environment, use an ephemeral virtual environment.
+                temp_dir = cache.environment()?;
+                let venv = uv_virtualenv::create_venv(
+                    temp_dir.path(),
+                    interpreter,
+                    uv_virtualenv::Prompt::None,
+                    false,
+                    false,
+                    false,
+                )?;
+                venv.into_interpreter()
+            } else {
+                interpreter
+            }
         };
 
         Some(interpreter)
@@ -255,7 +387,7 @@ pub(crate) async fn run(
         );
     }
 
-    // Read the `--with` requirements.
+    // Read the requirements.
     let spec = if requirements.is_empty() {
         None
     } else {
@@ -273,6 +405,7 @@ pub(crate) async fn run(
     // any `--with` requirements, and we already have a base environment, then there's no need to
     // create an additional environment.
     let skip_ephemeral = base_interpreter.as_ref().is_some_and(|base_interpreter| {
+        // No additional requirements.
         let Some(spec) = spec.as_ref() else {
             return true;
         };
@@ -334,47 +467,43 @@ pub(crate) async fn run(
                 python_fetch,
                 &client_builder,
                 cache,
-                Some(&reporter),
+                Some(&download_reporter),
             )
             .await?
             .into_interpreter()
         };
 
-        // TODO(charlie): If the environment satisfies the requirements, skip creation.
-        // TODO(charlie): Pass the already-installed versions as preferences, or even as the
-        // "installed" packages, so that we can skip re-installing them in the ephemeral
-        // environment.
+        Some(match spec.filter(|spec| !spec.is_empty()) {
+            None => {
+                // Create a virtual environment
+                temp_dir = cache.environment()?;
+                uv_virtualenv::create_venv(
+                    temp_dir.path(),
+                    interpreter,
+                    uv_virtualenv::Prompt::None,
+                    false,
+                    false,
+                    false,
+                )?
+            }
+            Some(spec) => {
+                debug!("Syncing ephemeral requirements");
 
-        // Create a virtual environment
-        temp_dir = cache.environment()?;
-        let venv = uv_virtualenv::create_venv(
-            temp_dir.path(),
-            interpreter,
-            uv_virtualenv::Prompt::None,
-            false,
-            false,
-        )?;
-
-        if requirements.is_empty() {
-            Some(venv)
-        } else {
-            debug!("Syncing ephemeral requirements");
-
-            let client_builder = BaseClientBuilder::new()
-                .connectivity(connectivity)
-                .native_tls(native_tls);
-
-            let spec =
-                RequirementsSpecification::from_simple_sources(&requirements, &client_builder)
-                    .await?;
-
-            // Install the ephemeral requirements.
-            Some(
-                project::update_environment(
-                    venv,
+                CachedEnvironment::get_or_create(
                     spec,
+                    interpreter,
                     &settings,
                     &state,
+                    if show_resolution {
+                        Box::new(DefaultResolveLogger)
+                    } else {
+                        Box::new(SummaryResolveLogger)
+                    },
+                    if show_resolution {
+                        Box::new(DefaultInstallLogger)
+                    } else {
+                        Box::new(SummaryInstallLogger)
+                    },
                     preview,
                     connectivity,
                     concurrency,
@@ -382,10 +511,35 @@ pub(crate) async fn run(
                     cache,
                     printer,
                 )
-                .await?,
-            )
-        }
+                .await?
+                .into()
+            }
+        })
     };
+
+    // If we're running in an ephemeral environment, add a `sitecustomize.py` to enable loading of
+    // the base environment's site packages. Setting `PYTHONPATH` is insufficient, as it doesn't
+    // resolve `.pth` files in the base environment.
+    if let Some(ephemeral_env) = ephemeral_env.as_ref() {
+        if let Some(base_interpreter) = base_interpreter.as_ref() {
+            let ephemeral_site_packages = ephemeral_env
+                .site_packages()
+                .next()
+                .ok_or_else(|| anyhow!("Ephemeral environment has no site packages directory"))?;
+            let base_site_packages = base_interpreter
+                .site_packages()
+                .next()
+                .ok_or_else(|| anyhow!("Base environment has no site packages directory"))?;
+
+            fs_err::write(
+                ephemeral_site_packages.join("sitecustomize.py"),
+                format!(
+                    "import site; site.addsitedir(\"{}\")",
+                    base_site_packages.escape_for_python()
+                ),
+            )?;
+        }
+    }
 
     debug!("Running `{command}`");
     let mut process = Command::from(&command);
@@ -412,30 +566,6 @@ pub(crate) async fn run(
     )?;
     process.env("PATH", new_path);
 
-    // Construct the `PYTHONPATH` environment variable.
-    let new_python_path = std::env::join_paths(
-        ephemeral_env
-            .as_ref()
-            .map(PythonEnvironment::site_packages)
-            .into_iter()
-            .flatten()
-            .chain(
-                base_interpreter
-                    .as_ref()
-                    .map(Interpreter::site_packages)
-                    .into_iter()
-                    .flatten(),
-            )
-            .map(PathBuf::from)
-            .chain(
-                std::env::var_os("PYTHONPATH")
-                    .as_ref()
-                    .iter()
-                    .flat_map(std::env::split_paths),
-            ),
-    )?;
-    process.env("PYTHONPATH", new_python_path);
-
     // Spawn and wait for completion
     // Standard input, output, and error streams are all inherited
     // TODO(zanieb): Throw a nicer error message if the command is not found
@@ -445,6 +575,12 @@ pub(crate) async fn run(
             command.executable().to_string_lossy()
         )
     })?;
+
+    // Ignore signals in the parent process, deferring them to the child. This is safe as long as
+    // the command is the last thing that runs in this process; otherwise, we'd need to restore the
+    // signal handlers after the command completes.
+    let _handler = tokio::spawn(async { while tokio::signal::ctrl_c().await.is_ok() {} });
+
     let status = handle.wait().await.context("Child process disappeared")?;
 
     // Exit based on the result of the command

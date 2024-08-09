@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.80"
 homepage = "https://pypi.org/project/uv/"
 documentation = "https://pypi.org/project/uv/"
 repository = "https://github.com/astral-sh/uv"
@@ -45,6 +45,7 @@ uv-options-metadata = { path = "crates/uv-options-metadata" }
 uv-python = { path = "crates/uv-python" }
 uv-requirements = { path = "crates/uv-requirements" }
 uv-resolver = { path = "crates/uv-resolver" }
+uv-pubgrub = { path = "crates/uv-pubgrub" }
 uv-scripts = { path = "crates/uv-scripts" }
 uv-settings = { path = "crates/uv-settings" }
 uv-shell = { path = "crates/uv-shell" }
@@ -54,6 +55,7 @@ uv-types = { path = "crates/uv-types" }
 uv-version = { path = "crates/uv-version" }
 uv-virtualenv = { path = "crates/uv-virtualenv" }
 uv-warnings = { path = "crates/uv-warnings" }
+uv-workspace = { path = "crates/uv-workspace" }
 
 anstream = { version = "0.6.13" }
 anyhow = { version = "1.0.80" }
@@ -61,10 +63,11 @@ async-channel = { version = "2.2.0" }
 async-compression = { version = "0.4.6" }
 async-trait = { version = "0.1.78" }
 async_http_range_reader = { version = "0.8.0" }
-async_zip = { git = "https://github.com/charliermarsh/rs-async-zip", rev = "1dcb40cfe1bf5325a6fd4bfcf9894db40241f585", features = ["deflate"] }
-axoupdater = { version = "0.6.0", default-features = false }
+async_zip = { git = "https://github.com/charliermarsh/rs-async-zip", rev = "011b24604fa7bc223daaad7712c0694bac8f0a87", features = ["deflate"] }
+axoupdater = { version = "0.7.0", default-features = false }
 backoff = { version = "0.4.0" }
 base64 = { version = "0.22.0" }
+boxcar = { version = "0.2.5" }
 cachedir = { version = "0.3.1" }
 cargo-util = { version = "0.2.8" }
 chrono = { version = "0.4.31" }
@@ -101,7 +104,6 @@ md-5 = { version = "0.10.6" }
 memchr = { version = "2.7.4" }
 miette = { version = "7.2.0" }
 nanoid = { version = "0.4.0" }
-once_cell = { version = "1.19.0" }
 owo-colors = { version = "4.0.0" }
 path-absolutize = { version = "3.1.1" }
 path-slash = { version = "0.2.1" }
@@ -109,7 +111,7 @@ pathdiff = { version = "0.2.1" }
 petgraph = { version = "0.6.4" }
 platform-info = { version = "2.0.2" }
 proc-macro2 = { version = "1.0.86" }
-pubgrub = { git = "https://github.com/astral-sh/pubgrub", rev = "3f0ba760951ab0deeac874b98bb18fc90103fcf7" }
+pubgrub = { git = "https://github.com/astral-sh/pubgrub", rev = "2fac39371a47e7cb821e510aaa4de25405413d29" }
 pyo3 = { version = "0.21.0" }
 pyo3-log = { version = "0.10.0" }
 quote = { version = "1.0.36" }
@@ -123,12 +125,14 @@ rkyv = { version = "0.7.43", features = ["strict", "validation"] }
 rmp-serde = { version = "1.1.2" }
 rust-netrc = { version = "0.1.1" }
 rustc-hash = { version = "2.0.0" }
+rustix = { version = "0.38.34", default-features = false, features = ["fs", "std"] }
 same-file = { version = "1.0.6" }
 schemars = { version = "0.8.16", features = ["url"] }
 seahash = { version = "4.1.0" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.114" }
 sha2 = { version = "0.10.8" }
+smallvec = { version = "1.13.2" }
 syn = { version = "2.0.66" }
 sys-info = { version = "0.9.1" }
 target-lexicon = {version = "0.12.14" }
@@ -136,7 +140,7 @@ tempfile = { version = "3.9.0" }
 textwrap = { version = "0.16.1" }
 thiserror = { version = "1.0.56" }
 tl = { version = "0.7.7" }
-tokio = { version = "1.35.1", features = ["fs", "io-util", "macros", "process", "sync"] }
+tokio = { version = "1.35.1", features = ["fs", "io-util", "macros", "process", "signal", "sync"] }
 tokio-stream = { version = "0.1.14" }
 tokio-tar = { version = "0.3.1" }
 tokio-util = { version = "0.7.10", features = ["compat"] }
@@ -151,14 +155,16 @@ unscanny = { version = "0.1.0" }
 url = { version = "2.5.0" }
 urlencoding = { version = "2.1.3" }
 walkdir = { version = "2.5.0" }
-which = { version = "6.0.0" }
-winapi = { version = "0.3.9", features = ["fileapi", "handleapi", "ioapiset", "winbase", "winioctl", "winnt"] }
+which = { version = "6.0.0", features = ["regex"] }
+windows-sys = { version = "0.52.0", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Ioctl", "Win32_System_IO"] }
 winreg = { version = "0.52.0" }
+winsafe = { version = "0.0.22", features = ["kernel"] }
 wiremock = { version = "0.6.0" }
+xz2 = { version = "0.1.7" }
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [workspace.metadata.cargo-shear]
-ignored = ["flate2"]
+ignored = ["flate2", "xz2"]
 
 [patch.crates-io]
 # For pyproject-toml
@@ -200,9 +206,51 @@ rc_buffer = "warn"
 rc_mutex = "warn"
 rest_pat_in_fully_bound_structs = "warn"
 
+[profile.release]
+strip = true
+lto = "fat"
+
+# This profile is meant to mimic the `release` profile as closely as
+# possible, but using settings that are more beneficial for iterative
+# development. That is, the `release` profile is intended for actually
+# building the release, where as `profiling` is meant for building `uv`
+# for running benchmarks.
+#
+# The main differences here are to avoid stripping debug information
+# and disabling lto. This does result in a mismatch between our release
+# configuration and our benchmarking configuration, which is unfortunate.
+# But compile times with `lto = true` are completely untenable:
+#
+#     $ cargo b --profile profiling -p uv
+#        Compiling uv-cli v0.0.1 (/home/andrew/astral/uv/crates/uv-cli)
+#        Compiling uv v0.2.34 (/home/andrew/astral/uv/crates/uv)
+#         Finished `profiling` profile [optimized + debuginfo] target(s) in 3m 47s
+#
+# Using `lto = "thin"` brings a massive improvement, but it's still slow:
+#
+#     $ cargo b --profile profiling -p uv
+#        Compiling uv v0.2.34 (/home/andrew/astral/uv/crates/uv)
+#         Finished `profiling` profile [optimized + debuginfo] target(s) in 53.98s
+#
+# But with `lto = false`:
+#
+#     $ cargo b --profile profiling -p uv
+#        Compiling uv v0.2.34 (/home/andrew/astral/uv/crates/uv)
+#         Finished `profiling` profile [optimized + debuginfo] target(s) in 30.09s
+#
+# We get more reasonable-ish compile times. At least, it's not enough
+# time to get up and get a cup of coffee before it completes.
+#
+# This setup does risk that we are measuring something in benchmarks
+# that we are shipping, but in order to make those two the same, we'd
+# either need to make compile times way worse for development, or take
+# a hit to binary size and a slight hit to runtime performance in our
+# release builds.
 [profile.profiling]
 inherits = "release"
-debug = true
+strip = false
+debug = "full"
+lto = false
 
 [profile.fast-build]
 inherits = "dev"
@@ -212,7 +260,6 @@ strip = "debuginfo"
 # The profile that 'cargo dist' will build with.
 [profile.dist]
 inherits = "release"
-lto = "thin"
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
@@ -261,6 +308,8 @@ build-local-artifacts = false
 local-artifacts-jobs = ["./build-binaries", "./build-docker"]
 # Publish jobs to run in CI
 publish-jobs = ["./publish-pypi"]
+# Announcement jobs to run in CI
+post-announce-jobs = ["./publish-docs"]
 # Custom permissions for GitHub Jobs
 github-custom-job-permissions = { "build-docker" = { packages = "write", contents = "read" } }
 # Whether to install an updater program

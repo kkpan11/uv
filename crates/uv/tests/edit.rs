@@ -5,6 +5,7 @@ use assert_fs::prelude::*;
 use indoc::indoc;
 use insta::assert_snapshot;
 
+use crate::common::packse_index_url;
 use common::{uv_snapshot, TestContext};
 
 mod common;
@@ -30,7 +31,7 @@ fn add_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
@@ -69,7 +70,10 @@ fn add_registry() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "anyio"
         version = "3.7.0"
         source = { registry = "https://pypi.org/simple" }
@@ -82,7 +86,7 @@ fn add_registry() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/68/fe/7ce1926952c8a403b35029e194555558514b365ad77d75125f521a2bec62/anyio-3.7.0-py3-none-any.whl", hash = "sha256:eddca883c4175f14df8aedce21054bfca3adb70ffe76a9f607aef9d7fa2ea7f0", size = 80873 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "idna"
         version = "3.6"
         source = { registry = "https://pypi.org/simple" }
@@ -91,7 +95,7 @@ fn add_registry() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -99,7 +103,7 @@ fn add_registry() -> Result<()> {
             { name = "anyio" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "sniffio"
         version = "1.3.1"
         source = { registry = "https://pypi.org/simple" }
@@ -118,7 +122,7 @@ fn add_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 4 packages in [TIME]
     "###);
 
@@ -127,6 +131,7 @@ fn add_registry() -> Result<()> {
 
 /// Add a Git requirement.
 #[test]
+#[cfg(feature = "git")]
 fn add_git() -> Result<()> {
     let context = TestContext::new("3.12");
 
@@ -145,7 +150,7 @@ fn add_git() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv lock` is experimental and may change without warning.
+    warning: `uv lock` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     "###);
 
@@ -155,7 +160,7 @@ fn add_git() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
      + anyio==3.7.0
@@ -186,7 +191,7 @@ fn add_git() -> Result<()> {
     Installed 2 packages in [TIME]
      - project==0.1.0 (from file://[TEMP_DIR]/)
      + project==0.1.0 (from file://[TEMP_DIR]/)
-     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979?tag=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
+     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
     "###);
 
     let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
@@ -221,7 +226,10 @@ fn add_git() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "anyio"
         version = "3.7.0"
         source = { registry = "https://pypi.org/simple" }
@@ -234,7 +242,7 @@ fn add_git() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/68/fe/7ce1926952c8a403b35029e194555558514b365ad77d75125f521a2bec62/anyio-3.7.0-py3-none-any.whl", hash = "sha256:eddca883c4175f14df8aedce21054bfca3adb70ffe76a9f607aef9d7fa2ea7f0", size = 80873 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "idna"
         version = "3.6"
         source = { registry = "https://pypi.org/simple" }
@@ -243,7 +251,7 @@ fn add_git() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -252,7 +260,7 @@ fn add_git() -> Result<()> {
             { name = "uv-public-pypackage" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "sniffio"
         version = "1.3.1"
         source = { registry = "https://pypi.org/simple" }
@@ -261,7 +269,7 @@ fn add_git() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "uv-public-pypackage"
         version = "0.1.0"
         source = { git = "https://github.com/astral-test/uv-public-pypackage?tag=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979" }
@@ -276,8 +284,67 @@ fn add_git() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 5 packages in [TIME]
+    "###);
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "git")]
+fn add_git_error() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.lock(), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv lock` is experimental and may change without warning
+    Resolved 1 package in [TIME]
+    "###);
+
+    uv_snapshot!(context.filters(), context.sync().arg("--frozen"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv sync` is experimental and may change without warning
+    Prepared 1 package in [TIME]
+    Installed 1 package in [TIME]
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+    "###);
+
+    // Provide a tag without a Git source.
+    uv_snapshot!(context.filters(), context.add(&[]).arg("flask").arg("--tag").arg("0.0.1").arg("--preview"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: `flask` did not resolve to a Git repository, but a Git reference (`--tag 0.0.1`) was provided.
+    "###);
+
+    // Provide a tag with a non-Git source.
+    uv_snapshot!(context.filters(), context.add(&[]).arg("flask @ https://files.pythonhosted.org/packages/61/80/ffe1da13ad9300f87c93af113edd0638c75138c42a0994becfacac078c06/flask-3.0.3-py3-none-any.whl").arg("--branch").arg("0.0.1").arg("--preview"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: `flask` did not resolve to a Git repository, but a Git reference (`--branch 0.0.1`) was provided.
     "###);
 
     Ok(())
@@ -285,6 +352,7 @@ fn add_git() -> Result<()> {
 
 /// Add a Git requirement using the `--raw-sources` API.
 #[test]
+#[cfg(feature = "git")]
 fn add_git_raw() -> Result<()> {
     let context = TestContext::new("3.12");
 
@@ -303,7 +371,7 @@ fn add_git_raw() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv lock` is experimental and may change without warning.
+    warning: `uv lock` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     "###);
 
@@ -313,7 +381,7 @@ fn add_git_raw() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
      + anyio==3.7.0
@@ -335,7 +403,7 @@ fn add_git_raw() -> Result<()> {
     Installed 2 packages in [TIME]
      - project==0.1.0 (from file://[TEMP_DIR]/)
      + project==0.1.0 (from file://[TEMP_DIR]/)
-     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979?rev=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
+     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
     "###);
 
     let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
@@ -367,7 +435,10 @@ fn add_git_raw() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "anyio"
         version = "3.7.0"
         source = { registry = "https://pypi.org/simple" }
@@ -380,7 +451,7 @@ fn add_git_raw() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/68/fe/7ce1926952c8a403b35029e194555558514b365ad77d75125f521a2bec62/anyio-3.7.0-py3-none-any.whl", hash = "sha256:eddca883c4175f14df8aedce21054bfca3adb70ffe76a9f607aef9d7fa2ea7f0", size = 80873 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "idna"
         version = "3.6"
         source = { registry = "https://pypi.org/simple" }
@@ -389,7 +460,7 @@ fn add_git_raw() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -398,7 +469,7 @@ fn add_git_raw() -> Result<()> {
             { name = "uv-public-pypackage" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "sniffio"
         version = "1.3.1"
         source = { registry = "https://pypi.org/simple" }
@@ -407,7 +478,7 @@ fn add_git_raw() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "uv-public-pypackage"
         version = "0.1.0"
         source = { git = "https://github.com/astral-test/uv-public-pypackage?rev=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979" }
@@ -422,8 +493,99 @@ fn add_git_raw() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 5 packages in [TIME]
+    "###);
+
+    Ok(())
+}
+
+/// Add a Git requirement without the `git+` prefix.
+#[test]
+#[cfg(feature = "git")]
+fn add_git_implicit() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = ["anyio==3.7.0"]
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.lock(), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv lock` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    "###);
+
+    uv_snapshot!(context.filters(), context.sync().arg("--frozen"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv sync` is experimental and may change without warning
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==3.7.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    // Omit the `git+` prefix.
+    uv_snapshot!(context.filters(), context.add(&["uv-public-pypackage @ https://github.com/astral-test/uv-public-pypackage.git"]).arg("--preview"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    Resolved 5 packages in [TIME]
+    Prepared 2 packages in [TIME]
+    Uninstalled 1 package in [TIME]
+    Installed 2 packages in [TIME]
+     - project==0.1.0 (from file://[TEMP_DIR]/)
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage.git@b270df1a2fb5d012294e9aaf05e7e0bab1e6a389)
+    "###);
+
+    Ok(())
+}
+
+/// `--raw-sources` should be considered conflicting with sources-specific arguments, like `--tag`.
+#[test]
+#[cfg(feature = "git")]
+fn add_raw_error() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    // Provide a tag without a Git source.
+    uv_snapshot!(context.filters(), context.add(&[]).arg("uv-public-pypackage @ git+https://github.com/astral-test/uv-public-pypackage").arg("--tag").arg("0.0.1").arg("--raw-sources").arg("--preview"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: the argument '--tag <TAG>' cannot be used with '--raw-sources'
+
+    Usage: uv add --cache-dir [CACHE_DIR] --tag <TAG> --exclude-newer <EXCLUDE_NEWER> <REQUIREMENTS>...
+
+    For more information, try '--help'.
     "###);
 
     Ok(())
@@ -431,6 +593,7 @@ fn add_git_raw() -> Result<()> {
 
 /// Add an unnamed requirement.
 #[test]
+#[cfg(feature = "git")]
 fn add_unnamed() -> Result<()> {
     let context = TestContext::new("3.12");
 
@@ -454,7 +617,7 @@ fn add_unnamed() -> Result<()> {
     Prepared 2 packages in [TIME]
     Installed 2 packages in [TIME]
      + project==0.1.0 (from file://[TEMP_DIR]/)
-     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979?tag=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
+     + uv-public-pypackage==0.1.0 (from git+https://github.com/astral-test/uv-public-pypackage@0dacfd662c64cb4ceb16e6cf65a157a8b715b979)
     "###);
 
     let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
@@ -489,7 +652,10 @@ fn add_unnamed() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -497,7 +663,7 @@ fn add_unnamed() -> Result<()> {
             { name = "uv-public-pypackage" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "uv-public-pypackage"
         version = "0.1.0"
         source = { git = "https://github.com/astral-test/uv-public-pypackage?tag=0.0.1#0dacfd662c64cb4ceb16e6cf65a157a8b715b979" }
@@ -512,7 +678,7 @@ fn add_unnamed() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 2 packages in [TIME]
     "###);
 
@@ -539,7 +705,7 @@ fn add_remove_dev() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
@@ -581,7 +747,10 @@ fn add_remove_dev() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "anyio"
         version = "3.7.0"
         source = { registry = "https://pypi.org/simple" }
@@ -594,7 +763,7 @@ fn add_remove_dev() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/68/fe/7ce1926952c8a403b35029e194555558514b365ad77d75125f521a2bec62/anyio-3.7.0-py3-none-any.whl", hash = "sha256:eddca883c4175f14df8aedce21054bfca3adb70ffe76a9f607aef9d7fa2ea7f0", size = 80873 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "idna"
         version = "3.6"
         source = { registry = "https://pypi.org/simple" }
@@ -603,17 +772,17 @@ fn add_remove_dev() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
 
-        [distribution.dev-dependencies]
+        [package.dev-dependencies]
         dev = [
             { name = "anyio" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "sniffio"
         version = "1.3.1"
         source = { registry = "https://pypi.org/simple" }
@@ -632,7 +801,7 @@ fn add_remove_dev() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 4 packages in [TIME]
     "###);
 
@@ -643,7 +812,7 @@ fn add_remove_dev() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     warning: `anyio` is a development dependency; try calling `uv remove --dev`
     error: The dependency `anyio` could not be found in `dependencies`
     "###);
@@ -655,7 +824,7 @@ fn add_remove_dev() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     Resolved 1 package in [TIME]
     Prepared 1 package in [TIME]
     Uninstalled 4 packages in [TIME]
@@ -696,7 +865,10 @@ fn add_remove_dev() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -711,7 +883,7 @@ fn add_remove_dev() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 1 package in [TIME]
     "###);
 
@@ -738,11 +910,14 @@ fn add_remove_optional() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
-    Resolved 1 package in [TIME]
-    Prepared 1 package in [TIME]
-    Installed 1 package in [TIME]
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==3.7.0
+     + idna==3.6
      + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
     "###);
 
     let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
@@ -777,23 +952,66 @@ fn add_remove_optional() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
+        name = "anyio"
+        version = "3.7.0"
+        source = { registry = "https://pypi.org/simple" }
+        dependencies = [
+            { name = "idna" },
+            { name = "sniffio" },
+        ]
+        sdist = { url = "https://files.pythonhosted.org/packages/c6/b3/fefbf7e78ab3b805dec67d698dc18dd505af7a18a8dd08868c9b4fa736b5/anyio-3.7.0.tar.gz", hash = "sha256:275d9973793619a5374e1c89a4f4ad3f4b0a5510a2b5b939444bee8f4c4d37ce", size = 142737 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/68/fe/7ce1926952c8a403b35029e194555558514b365ad77d75125f521a2bec62/anyio-3.7.0-py3-none-any.whl", hash = "sha256:eddca883c4175f14df8aedce21054bfca3adb70ffe76a9f607aef9d7fa2ea7f0", size = 80873 },
+        ]
+
+        [[package]]
+        name = "idna"
+        version = "3.6"
+        source = { registry = "https://pypi.org/simple" }
+        sdist = { url = "https://files.pythonhosted.org/packages/bf/3f/ea4b9117521a1e9c50344b909be7886dd00a519552724809bb1f486986c2/idna-3.6.tar.gz", hash = "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca", size = 175426 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
+        ]
+
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
+
+        [package.optional-dependencies]
+        io = [
+            { name = "anyio" },
+        ]
+
+        [[package]]
+        name = "sniffio"
+        version = "1.3.1"
+        source = { registry = "https://pypi.org/simple" }
+        sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
+        ]
         "###
         );
     });
 
-    // Install from the lockfile.
+    // Install from the lockfile. At present, this will _uninstall_ the packages since `sync` does
+    // not include extras by default.
     uv_snapshot!(context.filters(), context.sync().arg("--frozen"), @r###"
     success: true
     exit_code: 0
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
-    Audited 1 package in [TIME]
+    warning: `uv sync` is experimental and may change without warning
+    Uninstalled 3 packages in [TIME]
+     - anyio==3.7.0
+     - idna==3.6
+     - sniffio==1.3.1
     "###);
 
     // This should fail without --optional.
@@ -803,7 +1021,7 @@ fn add_remove_optional() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     warning: `anyio` is an optional dependency; try calling `uv remove --optional io`
     error: The dependency `anyio` could not be found in `dependencies`
     "###);
@@ -815,7 +1033,7 @@ fn add_remove_optional() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     Resolved 1 package in [TIME]
     Prepared 1 package in [TIME]
     Uninstalled 1 package in [TIME]
@@ -853,7 +1071,10 @@ fn add_remove_optional() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -868,7 +1089,7 @@ fn add_remove_optional() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 1 package in [TIME]
     "###);
 
@@ -976,7 +1197,10 @@ fn add_remove_workspace() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "child1"
         version = "0.1.0"
         source = { editable = "child1" }
@@ -984,7 +1208,7 @@ fn add_remove_workspace() -> Result<()> {
             { name = "child2" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "child2"
         version = "0.1.0"
         source = { editable = "child2" }
@@ -999,7 +1223,7 @@ fn add_remove_workspace() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 2 packages in [TIME]
     "###);
 
@@ -1010,7 +1234,7 @@ fn add_remove_workspace() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     Resolved 2 packages in [TIME]
     Prepared 1 package in [TIME]
     Uninstalled 2 packages in [TIME]
@@ -1048,12 +1272,15 @@ fn add_remove_workspace() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "child1"
         version = "0.1.0"
         source = { editable = "child1" }
 
-        [[distribution]]
+        [[package]]
         name = "child2"
         version = "0.1.0"
         source = { editable = "child2" }
@@ -1068,7 +1295,7 @@ fn add_remove_workspace() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 1 package in [TIME]
     "###);
 
@@ -1156,7 +1383,10 @@ fn add_workspace_editable() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "child1"
         version = "0.1.0"
         source = { editable = "child1" }
@@ -1164,7 +1394,7 @@ fn add_workspace_editable() -> Result<()> {
             { name = "child2" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "child2"
         version = "0.1.0"
         source = { editable = "child2" }
@@ -1179,7 +1409,7 @@ fn add_workspace_editable() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 2 packages in [TIME]
     "###);
 
@@ -1188,6 +1418,7 @@ fn add_workspace_editable() -> Result<()> {
 
 /// Update a requirement, modifying the source and extras.
 #[test]
+#[cfg(feature = "git")]
 fn update() -> Result<()> {
     let context = TestContext::new("3.12");
 
@@ -1208,7 +1439,7 @@ fn update() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv lock` is experimental and may change without warning.
+    warning: `uv lock` is experimental and may change without warning
     Resolved 6 packages in [TIME]
     "###);
 
@@ -1218,7 +1449,7 @@ fn update() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Prepared 6 packages in [TIME]
     Installed 6 packages in [TIME]
      + certifi==2024.2.2
@@ -1236,7 +1467,7 @@ fn update() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 6 packages in [TIME]
     Prepared 1 package in [TIME]
     Uninstalled 1 package in [TIME]
@@ -1270,7 +1501,7 @@ fn update() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 8 packages in [TIME]
     Prepared 3 packages in [TIME]
     Uninstalled 1 package in [TIME]
@@ -1299,15 +1530,16 @@ fn update() -> Result<()> {
         );
     });
 
-    // Change the source by specifying a version (note the extras should be preserved).
+    // Change the source by specifying a version (note the extras, markers, and version should be
+    // preserved).
     uv_snapshot!(context.filters(), context.add(&["requests @ git+https://github.com/psf/requests"]).arg("--tag=v2.32.3"), @r###"
     success: true
     exit_code: 0
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
-    warning: `uv.sources` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
+    warning: `uv.sources` is experimental and may change without warning
     Resolved 8 packages in [TIME]
     Prepared 2 packages in [TIME]
     Uninstalled 2 packages in [TIME]
@@ -1315,7 +1547,7 @@ fn update() -> Result<()> {
      - project==0.1.0 (from file://[TEMP_DIR]/)
      + project==0.1.0 (from file://[TEMP_DIR]/)
      - requests==2.31.0
-     + requests==2.32.3 (from git+https://github.com/psf/requests@0e322af87745eff34caffe4df68456ebc20d9068?tag=v2.32.3#0e322af87745eff34caffe4df68456ebc20d9068)
+     + requests==2.32.3 (from git+https://github.com/psf/requests@0e322af87745eff34caffe4df68456ebc20d9068)
     "###);
 
     let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
@@ -1330,7 +1562,7 @@ fn update() -> Result<()> {
         version = "0.1.0"
         requires-python = ">=3.12"
         dependencies = [
-            "requests[security,socks,use-chardet-on-py3] ; python_version > '3.7'",
+            "requests[security,socks,use-chardet-on-py3]==2.31.0 ; python_version > '3.7'",
         ]
 
         [tool.uv.sources]
@@ -1349,7 +1581,10 @@ fn update() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "certifi"
         version = "2024.2.2"
         source = { registry = "https://pypi.org/simple" }
@@ -1358,7 +1593,7 @@ fn update() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/ba/06/a07f096c664aeb9f01624f858c3add0a4e913d6c96257acb4fce61e7de14/certifi-2024.2.2-py3-none-any.whl", hash = "sha256:dc383c07b76109f368f6106eee2b593b04a011ea4d55f652c6ca24a754d1cdd1", size = 163774 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "chardet"
         version = "5.2.0"
         source = { registry = "https://pypi.org/simple" }
@@ -1367,7 +1602,7 @@ fn update() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/38/6f/f5fbc992a329ee4e0f288c1fe0e2ad9485ed064cac731ed2fe47dcc38cbf/chardet-5.2.0-py3-none-any.whl", hash = "sha256:e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970", size = 199385 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "charset-normalizer"
         version = "3.3.2"
         source = { registry = "https://pypi.org/simple" }
@@ -1391,7 +1626,7 @@ fn update() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/28/76/e6222113b83e3622caa4bb41032d0b1bf785250607392e1b778aca0b8a7d/charset_normalizer-3.3.2-py3-none-any.whl", hash = "sha256:3e4d1f6587322d2788836a99c69062fbb091331ec940e02d12d179c1d53e25fc", size = 48543 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "idna"
         version = "3.6"
         source = { registry = "https://pypi.org/simple" }
@@ -1400,17 +1635,15 @@ fn update() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
         dependencies = [
-            { name = "requests" },
-            { name = "requests", extra = "socks" },
-            { name = "requests", extra = "use-chardet-on-py3" },
+            { name = "requests", extra = ["socks", "use-chardet-on-py3"] },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "pysocks"
         version = "1.7.1"
         source = { registry = "https://pypi.org/simple" }
@@ -1419,7 +1652,7 @@ fn update() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/8d/59/b4572118e098ac8e46e399a1dd0f2d85403ce8bbaad9ec79373ed6badaf9/PySocks-1.7.1-py3-none-any.whl", hash = "sha256:2725bd0a9925919b9b51739eea5f9e2bae91e83288108a9ad338b2e3a4435ee5", size = 16725 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "requests"
         version = "2.32.3"
         source = { git = "https://github.com/psf/requests?tag=v2.32.3#0e322af87745eff34caffe4df68456ebc20d9068" }
@@ -1430,7 +1663,7 @@ fn update() -> Result<()> {
             { name = "urllib3" },
         ]
 
-        [distribution.optional-dependencies]
+        [package.optional-dependencies]
         socks = [
             { name = "pysocks" },
         ]
@@ -1438,7 +1671,7 @@ fn update() -> Result<()> {
             { name = "chardet" },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "urllib3"
         version = "2.2.1"
         source = { registry = "https://pypi.org/simple" }
@@ -1457,9 +1690,69 @@ fn update() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 8 packages in [TIME]
     "###);
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "git")]
+fn update_source_replace_url() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "requests[security] @ https://files.pythonhosted.org/packages/f9/9b/335f9764261e915ed497fcdeb11df5dfd6f7bf257d4a6a2a686d80da4d54/requests-2.32.3-py3-none-any.whl"
+        ]
+    "#})?;
+
+    // Change the source. The existing URL should be removed.
+    uv_snapshot!(context.filters(), context.add(&["requests @ git+https://github.com/psf/requests"]).arg("--tag=v2.32.3"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    warning: `uv.sources` is experimental and may change without warning
+    Resolved 6 packages in [TIME]
+    Prepared 6 packages in [TIME]
+    Installed 6 packages in [TIME]
+     + certifi==2024.2.2
+     + charset-normalizer==3.3.2
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + requests==2.32.3 (from git+https://github.com/psf/requests@0e322af87745eff34caffe4df68456ebc20d9068)
+     + urllib3==2.2.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "requests[security]",
+        ]
+
+        [tool.uv.sources]
+        requests = { git = "https://github.com/psf/requests", tag = "v2.32.3" }
+        "###
+        );
+    });
 
     Ok(())
 }
@@ -1486,7 +1779,7 @@ fn add_no_clean() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv lock` is experimental and may change without warning.
+    warning: `uv lock` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     "###);
 
@@ -1496,7 +1789,7 @@ fn add_no_clean() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
      + anyio==3.7.0
@@ -1520,7 +1813,7 @@ fn add_no_clean() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 2 packages in [TIME]
     Prepared 2 packages in [TIME]
     Uninstalled 1 package in [TIME]
@@ -1558,7 +1851,10 @@ fn add_no_clean() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "iniconfig"
         version = "2.0.0"
         source = { registry = "https://pypi.org/simple" }
@@ -1567,7 +1863,7 @@ fn add_no_clean() -> Result<()> {
             { url = "https://files.pythonhosted.org/packages/ef/a6/62565a6e1cf69e10f5727360368e451d4b7f58beeac6173dc9db836a5b46/iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374", size = 5892 },
         ]
 
-        [[distribution]]
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -1585,7 +1881,7 @@ fn add_no_clean() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 2 packages in [TIME]
     "###);
 
@@ -1596,7 +1892,7 @@ fn add_no_clean() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Uninstalled 3 packages in [TIME]
      - anyio==3.7.0
      - idna==3.6
@@ -1626,7 +1922,7 @@ fn remove_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv lock` is experimental and may change without warning.
+    warning: `uv lock` is experimental and may change without warning
     Resolved 4 packages in [TIME]
     "###);
 
@@ -1636,7 +1932,7 @@ fn remove_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Prepared 4 packages in [TIME]
     Installed 4 packages in [TIME]
      + anyio==3.7.0
@@ -1651,7 +1947,7 @@ fn remove_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv remove` is experimental and may change without warning.
+    warning: `uv remove` is experimental and may change without warning
     Resolved 1 package in [TIME]
     Prepared 1 package in [TIME]
     Uninstalled 4 packages in [TIME]
@@ -1689,7 +1985,10 @@ fn remove_registry() -> Result<()> {
         version = 1
         requires-python = ">=3.12"
 
-        [[distribution]]
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
         name = "project"
         version = "0.1.0"
         source = { editable = "." }
@@ -1704,7 +2003,7 @@ fn remove_registry() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv sync` is experimental and may change without warning.
+    warning: `uv sync` is experimental and may change without warning
     Audited 1 package in [TIME]
     "###);
 
@@ -1733,7 +2032,7 @@ fn add_preserves_indentation_in_pyproject_toml() -> Result<()> {
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 8 packages in [TIME]
     Prepared 8 packages in [TIME]
     Installed 8 packages in [TIME]
@@ -1789,7 +2088,7 @@ fn add_puts_default_indentation_in_pyproject_toml_if_not_observed() -> Result<()
     ----- stdout -----
 
     ----- stderr -----
-    warning: `uv add` is experimental and may change without warning.
+    warning: `uv add` is experimental and may change without warning
     Resolved 8 packages in [TIME]
     Prepared 8 packages in [TIME]
     Installed 8 packages in [TIME]
@@ -1822,5 +2121,794 @@ fn add_puts_default_indentation_in_pyproject_toml_if_not_observed() -> Result<()
         "###
         );
     });
+    Ok(())
+}
+
+/// Add a requirement without updating the lockfile.
+#[test]
+fn add_frozen() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.add(&["anyio==3.7.0"]).arg("--frozen"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio==3.7.0",
+        ]
+        "###
+        );
+    });
+
+    assert!(!context.temp_dir.join("uv.lock").exists());
+
+    Ok(())
+}
+
+/// Add a requirement without updating the environment.
+#[test]
+fn add_no_sync() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.add(&["anyio==3.7.0"]).arg("--no-sync"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio==3.7.0",
+        ]
+        "###
+        );
+    });
+
+    assert!(context.temp_dir.join("uv.lock").exists());
+
+    Ok(())
+}
+
+#[test]
+fn add_reject_multiple_git_ref_flags() {
+    let context = TestContext::new("3.12");
+
+    // --tag and --branch
+    uv_snapshot!(context
+        .add(&[])
+        .arg("foo")
+        .arg("--tag")
+        .arg("0.0.1")
+        .arg("--branch")
+        .arg("test"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: the argument '--tag <TAG>' cannot be used with '--branch <BRANCH>'
+
+    Usage: uv add --cache-dir [CACHE_DIR] --tag <TAG> --exclude-newer <EXCLUDE_NEWER> <REQUIREMENTS>...
+
+    For more information, try '--help'.
+    "###
+    );
+
+    // --tag and --rev
+    uv_snapshot!(context
+        .add(&[])
+        .arg("foo")
+        .arg("--tag")
+        .arg("0.0.1")
+        .arg("--rev")
+        .arg("326b943"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: the argument '--tag <TAG>' cannot be used with '--rev <REV>'
+
+    Usage: uv add --cache-dir [CACHE_DIR] --tag <TAG> --exclude-newer <EXCLUDE_NEWER> <REQUIREMENTS>...
+
+    For more information, try '--help'.
+    "###
+    );
+
+    // --tag and --tag
+    uv_snapshot!(context
+        .add(&[])
+        .arg("foo")
+        .arg("--tag")
+        .arg("0.0.1")
+        .arg("--tag")
+        .arg("0.0.2"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    error: the argument '--tag <TAG>' cannot be used multiple times
+
+    Usage: uv add [OPTIONS] <REQUIREMENTS>...
+
+    For more information, try '--help'.
+    "###
+    );
+}
+
+/// Avoiding persisting `add` calls when resolution fails.
+#[test]
+fn add_error() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.add(&["xyz"]), @r###"
+    success: false
+    exit_code: 1
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+      × No solution found when resolving dependencies:
+      ╰─▶ Because there are no versions of xyz and project==0.1.0 depends on xyz, we can conclude that project==0.1.0 cannot be used.
+          And because only project==0.1.0 is available and you require project, we can conclude that the requirements are unsatisfiable.
+      help: If this is intentional, run `uv add --frozen` to skip the lock and sync steps.
+    "###);
+
+    uv_snapshot!(context.filters(), context.add(&["xyz"]).arg("--frozen"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    "###);
+
+    let lock = context.temp_dir.join("uv.lock");
+    assert!(!lock.exists());
+
+    Ok(())
+}
+
+/// Set a lower bound when adding unconstrained dependencies.
+#[test]
+fn add_lower_bound() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    // Adding `anyio` should include a lower-bound.
+    uv_snapshot!(context.filters(), context.add(&["anyio"]), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio>=4.3.0",
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Avoid setting a lower bound when updating existing dependencies.
+#[test]
+fn add_lower_bound_existing() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = ["anyio"]
+    "#})?;
+
+    // Adding `anyio` should _not_ set a lower-bound, since it's already present (even if
+    // unconstrained).
+    uv_snapshot!(context.filters(), context.add(&["anyio"]), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio",
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Avoid setting a lower bound with `--raw-sources`.
+#[test]
+fn add_lower_bound_raw() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = ["anyio"]
+    "#})?;
+
+    // Adding `anyio` should _not_ set a lower-bound when using `--raw-sources`.
+    uv_snapshot!(context.filters(), context.add(&["anyio"]).arg("--raw-sources"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio",
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Set a lower bound when adding unconstrained dev dependencies.
+#[test]
+fn add_lower_bound_dev() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    // Adding `anyio` should include a lower-bound.
+    uv_snapshot!(context.filters(), context.add(&["anyio"]).arg("--dev"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+
+        [tool.uv]
+        dev-dependencies = [
+            "anyio>=4.3.0",
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Set a lower bound when adding unconstrained optional dependencies.
+#[test]
+fn add_lower_bound_optional() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    // Adding `anyio` should include a lower-bound.
+    uv_snapshot!(context.filters(), context.add(&["anyio"]).arg("--optional=io"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+
+        [project.optional-dependencies]
+        io = [
+            "anyio>=4.3.0",
+        ]
+        "###
+        );
+    });
+
+    let lock = fs_err::read_to_string(context.temp_dir.join("uv.lock"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            lock, @r###"
+        version = 1
+        requires-python = ">=3.12"
+
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
+        name = "anyio"
+        version = "4.3.0"
+        source = { registry = "https://pypi.org/simple" }
+        dependencies = [
+            { name = "idna" },
+            { name = "sniffio" },
+        ]
+        sdist = { url = "https://files.pythonhosted.org/packages/db/4d/3970183622f0330d3c23d9b8a5f52e365e50381fd484d08e3285104333d3/anyio-4.3.0.tar.gz", hash = "sha256:f75253795a87df48568485fd18cdd2a3fa5c4f7c5be8e5e36637733fce06fed6", size = 159642 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/14/fd/2f20c40b45e4fb4324834aea24bd4afdf1143390242c0b33774da0e2e34f/anyio-4.3.0-py3-none-any.whl", hash = "sha256:048e05d0f6caeed70d731f3db756d35dcc1f35747c8c403364a8332c630441b8", size = 85584 },
+        ]
+
+        [[package]]
+        name = "idna"
+        version = "3.6"
+        source = { registry = "https://pypi.org/simple" }
+        sdist = { url = "https://files.pythonhosted.org/packages/bf/3f/ea4b9117521a1e9c50344b909be7886dd00a519552724809bb1f486986c2/idna-3.6.tar.gz", hash = "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca", size = 175426 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/c2/e7/a82b05cf63a603df6e68d59ae6a68bf5064484a0718ea5033660af4b54a9/idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f", size = 61567 },
+        ]
+
+        [[package]]
+        name = "project"
+        version = "0.1.0"
+        source = { editable = "." }
+
+        [package.optional-dependencies]
+        io = [
+            { name = "anyio" },
+        ]
+
+        [[package]]
+        name = "sniffio"
+        version = "1.3.1"
+        source = { registry = "https://pypi.org/simple" }
+        sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Omit the local segment when adding dependencies (since `>=1.2.3+local` is invalid).
+#[test]
+fn add_lower_bound_local() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    // Adding `torch` should include a lower-bound, but no local segment.
+    uv_snapshot!(context.filters(), context.add(&["local-simple-a"]).arg("--extra-index-url").arg(packse_index_url()).env_remove("UV_EXCLUDE_NEWER"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 2 packages in [TIME]
+    Prepared 2 packages in [TIME]
+    Installed 2 packages in [TIME]
+     + local-simple-a==1.2.3+foo
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        requires-python = ">=3.12"
+        dependencies = [
+            "local-simple-a>=1.2.3",
+        ]
+        "###
+        );
+    });
+
+    let lock = fs_err::read_to_string(context.temp_dir.join("uv.lock"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            lock, @r###"
+        version = 1
+        requires-python = ">=3.12"
+
+        [[package]]
+        name = "local-simple-a"
+        version = "1.2.3+foo"
+        source = { registry = "https://astral-sh.github.io/packse/PACKSE_VERSION/simple-html/" }
+        sdist = { url = "https://astral-sh.github.io/packse/PACKSE_VERSION/files/local_simple_a-1.2.3+foo.tar.gz", hash = "sha256:ebd55c4a79d0a5759126657cb289ff97558902abcfb142e036b993781497edac" }
+        wheels = [
+            { url = "https://astral-sh.github.io/packse/PACKSE_VERSION/files/local_simple_a-1.2.3+foo-py3-none-any.whl", hash = "sha256:6f30e2e709b3e171cd734bb58705229a582587c29e0a7041227435583c7224cc" },
+        ]
+
+        [[package]]
+        name = "project"
+        version = "0.1.0"
+        source = { editable = "." }
+        dependencies = [
+            { name = "local-simple-a" },
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Add dependencies to a virtual workspace root.
+#[test]
+fn add_virtual() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r"
+        [tool.uv.workspace]
+        members = []
+    "})?;
+
+    // Adding `iniconfig` should fail, since virtual workspace roots don't support production
+    // dependencies.
+    uv_snapshot!(context.filters(), context.add(&["iniconfig"]), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    error: Found a virtual workspace root, but virtual projects do not support production dependencies (instead, use: `uv add --dev`)
+    "###);
+
+    // Adding `iniconfig` as optional should fail, since virtual workspace roots don't support
+    // optional dependencies.
+    uv_snapshot!(context.filters(), context.add(&["iniconfig"]).arg("--optional").arg("async"), @r###"
+    success: false
+    exit_code: 2
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    error: Found a virtual workspace root, but virtual projects do not support optional dependencies (instead, use: `uv add --dev`)
+    "###);
+
+    // Adding `iniconfig` as a dev dependency should succeed.
+    uv_snapshot!(context.filters(), context.add(&["iniconfig"]).arg("--dev"), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 1 package in [TIME]
+    Prepared 1 package in [TIME]
+    Installed 1 package in [TIME]
+     + iniconfig==2.0.0
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [tool.uv]
+        dev-dependencies = [
+            "iniconfig>=2.0.0",
+        ]
+        [tool.uv.workspace]
+        members = []
+        "###
+        );
+    });
+
+    let lock = fs_err::read_to_string(context.temp_dir.join("uv.lock"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            lock, @r###"
+        version = 1
+        requires-python = ">=3.12"
+
+        [options]
+        exclude-newer = "2024-03-25 00:00:00 UTC"
+
+        [[package]]
+        name = "iniconfig"
+        version = "2.0.0"
+        source = { registry = "https://pypi.org/simple" }
+        sdist = { url = "https://files.pythonhosted.org/packages/d7/4b/cbd8e699e64a6f16ca3a8220661b5f83792b3017d0f79807cb8708d33913/iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3", size = 4646 }
+        wheels = [
+            { url = "https://files.pythonhosted.org/packages/ef/a6/62565a6e1cf69e10f5727360368e451d4b7f58beeac6173dc9db836a5b46/iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374", size = 5892 },
+        ]
+        "###
+        );
+    });
+
+    Ok(())
+}
+
+/// Add the same requirement multiple times.
+#[test]
+fn add_repeat() -> Result<()> {
+    let context = TestContext::new("3.12");
+
+    let pyproject_toml = context.temp_dir.child("pyproject.toml");
+    pyproject_toml.write_str(indoc! {r#"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = []
+    "#})?;
+
+    uv_snapshot!(context.filters(), context.add(&["anyio"]), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Prepared 4 packages in [TIME]
+    Installed 4 packages in [TIME]
+     + anyio==4.3.0
+     + idna==3.6
+     + project==0.1.0 (from file://[TEMP_DIR]/)
+     + sniffio==1.3.1
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio>=4.3.0",
+        ]
+        "###
+        );
+    });
+
+    uv_snapshot!(context.filters(), context.add(&["anyio"]), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    warning: `uv add` is experimental and may change without warning
+    Resolved 4 packages in [TIME]
+    Audited 4 packages in [TIME]
+    "###);
+
+    let pyproject_toml = fs_err::read_to_string(context.temp_dir.join("pyproject.toml"))?;
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        assert_snapshot!(
+            pyproject_toml, @r###"
+        [project]
+        name = "project"
+        version = "0.1.0"
+        # ...
+        requires-python = ">=3.12"
+        dependencies = [
+            "anyio>=4.3.0",
+        ]
+        "###
+        );
+    });
+
     Ok(())
 }

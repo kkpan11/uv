@@ -1,19 +1,24 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 
+use uv_auth::store_credentials_from_url;
 use uv_cache::Cache;
 use uv_client::{Connectivity, FlatIndexClient, RegistryClientBuilder};
-use uv_configuration::{Concurrency, ExtrasSpecification, PreviewMode, SetupPyStrategy};
+use uv_configuration::{
+    Concurrency, ExtrasSpecification, HashCheckingMode, PreviewMode, SetupPyStrategy,
+};
 use uv_dispatch::BuildDispatch;
-use uv_distribution::{VirtualProject, DEV_DEPENDENCIES};
+use uv_fs::CWD;
 use uv_installer::SitePackages;
+use uv_normalize::{PackageName, DEV_DEPENDENCIES};
 use uv_python::{PythonEnvironment, PythonFetch, PythonPreference, PythonRequest};
-
 use uv_resolver::{FlatIndex, Lock};
 use uv_types::{BuildIsolation, HashStrategy};
 use uv_warnings::warn_user_once;
+use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace};
 
+use crate::commands::pip::loggers::{DefaultInstallLogger, DefaultResolveLogger, InstallLogger};
 use crate::commands::pip::operations::Modifications;
-use crate::commands::project::lock::do_lock;
+use crate::commands::project::lock::do_safe_lock;
 use crate::commands::project::{ProjectError, SharedState};
 use crate::commands::{pip, project, ExitStatus};
 use crate::printer::Printer;
@@ -24,6 +29,7 @@ use crate::settings::{InstallerSettingsRef, ResolverInstallerSettings};
 pub(crate) async fn sync(
     locked: bool,
     frozen: bool,
+    package: Option<PackageName>,
     extras: ExtrasSpecification,
     dev: bool,
     modifications: Modifications,
@@ -39,11 +45,20 @@ pub(crate) async fn sync(
     printer: Printer,
 ) -> Result<ExitStatus> {
     if preview.is_disabled() {
-        warn_user_once!("`uv sync` is experimental and may change without warning.");
+        warn_user_once!("`uv sync` is experimental and may change without warning");
     }
 
-    // Identify the project
-    let project = VirtualProject::discover(&std::env::current_dir()?, None).await?;
+    // Identify the project.
+    let project = if let Some(package) = package {
+        VirtualProject::Project(
+            Workspace::discover(&CWD, &DiscoveryOptions::default())
+                .await?
+                .with_current_project(package.clone())
+                .with_context(|| format!("Package `{package}` not found in workspace"))?,
+        )
+    } else {
+        VirtualProject::discover(&CWD, &DiscoveryOptions::default()).await?
+    };
 
     // Discover or create the virtual environment.
     let venv = project::get_or_init_environment(
@@ -58,100 +73,47 @@ pub(crate) async fn sync(
     )
     .await?;
 
+    let lock = match do_safe_lock(
+        locked,
+        frozen,
+        project.workspace(),
+        venv.interpreter(),
+        settings.as_ref().into(),
+        Box::new(DefaultResolveLogger),
+        preview,
+        connectivity,
+        concurrency,
+        native_tls,
+        cache,
+        printer,
+    )
+    .await
+    {
+        Ok(lock) => lock,
+        Err(ProjectError::Operation(pip::operations::Error::Resolve(
+            uv_resolver::ResolveError::NoSolution(err),
+        ))) => {
+            let report = miette::Report::msg(format!("{err}")).context(err.header());
+            anstream::eprint!("{report:?}");
+            return Ok(ExitStatus::Failure);
+        }
+        Err(err) => return Err(err.into()),
+    };
+
     // Initialize any shared state.
     let state = SharedState::default();
-
-    let lock = if frozen {
-        // Read the existing lockfile.
-        project::lock::read(project.workspace())
-            .await?
-            .ok_or_else(|| ProjectError::MissingLockfile)?
-    } else if locked {
-        // Read the existing lockfile.
-        let existing = project::lock::read(project.workspace())
-            .await?
-            .ok_or_else(|| ProjectError::MissingLockfile)?;
-
-        // Perform the lock operation, but don't write the lockfile to disk.
-        let lock = match do_lock(
-            project.workspace(),
-            venv.interpreter(),
-            Some(&existing),
-            settings.as_ref().into(),
-            &state,
-            preview,
-            connectivity,
-            concurrency,
-            native_tls,
-            cache,
-            printer,
-        )
-        .await
-        {
-            Ok(lock) => lock,
-            Err(ProjectError::Operation(pip::operations::Error::Resolve(
-                uv_resolver::ResolveError::NoSolution(err),
-            ))) => {
-                let report = miette::Report::msg(format!("{err}"))
-                    .context("No solution found when resolving dependencies:");
-                anstream::eprint!("{report:?}");
-                return Ok(ExitStatus::Failure);
-            }
-            Err(err) => return Err(err.into()),
-        };
-
-        // If the locks disagree, return an error.
-        if lock != existing {
-            return Err(ProjectError::LockMismatch.into());
-        }
-
-        lock
-    } else {
-        // Read the existing lockfile.
-        let existing = project::lock::read(project.workspace()).await?;
-
-        // Perform the lock operation.
-        match do_lock(
-            project.workspace(),
-            venv.interpreter(),
-            existing.as_ref(),
-            settings.as_ref().into(),
-            &state,
-            preview,
-            connectivity,
-            concurrency,
-            native_tls,
-            cache,
-            printer,
-        )
-        .await
-        {
-            Ok(lock) => {
-                project::lock::commit(&lock, project.workspace()).await?;
-                lock
-            }
-            Err(ProjectError::Operation(pip::operations::Error::Resolve(
-                uv_resolver::ResolveError::NoSolution(err),
-            ))) => {
-                let report = miette::Report::msg(format!("{err}"))
-                    .context("No solution found when resolving dependencies:");
-                anstream::eprint!("{report:?}");
-                return Ok(ExitStatus::Failure);
-            }
-            Err(err) => return Err(err.into()),
-        }
-    };
 
     // Perform the sync operation.
     do_sync(
         &project,
         &venv,
-        &lock,
-        extras,
+        &lock.lock,
+        &extras,
         dev,
         modifications,
         settings.as_ref().into(),
         &state,
+        Box::new(DefaultInstallLogger),
         preview,
         connectivity,
         concurrency,
@@ -169,11 +131,12 @@ pub(super) async fn do_sync(
     project: &VirtualProject,
     venv: &PythonEnvironment,
     lock: &Lock,
-    extras: ExtrasSpecification,
+    extras: &ExtrasSpecification,
     dev: bool,
     modifications: Modifications,
     settings: InstallerSettingsRef<'_>,
     state: &SharedState,
+    logger: Box<dyn InstallLogger>,
     preview: PreviewMode,
     connectivity: Connectivity,
     concurrency: Concurrency,
@@ -187,11 +150,13 @@ pub(super) async fn do_sync(
         index_strategy,
         keyring_provider,
         config_setting,
+        no_build_isolation,
         exclude_newer,
         link_mode,
         compile_bytecode,
         reinstall,
         build_options,
+        sources,
     } = settings;
 
     // Validate that the Python version is supported by the lockfile.
@@ -215,7 +180,12 @@ pub(super) async fn do_sync(
     let tags = venv.interpreter().tags()?;
 
     // Read the lockfile.
-    let resolution = lock.to_resolution(project, markers, tags, &extras, &dev)?;
+    let resolution = lock.to_resolution(project, markers, tags, extras, &dev)?;
+
+    // Add all authenticated sources to the cache.
+    for url in index_locations.urls() {
+        store_credentials_from_url(url);
+    }
 
     // Initialize the registry client.
     let client = RegistryClientBuilder::new(cache.clone())
@@ -228,12 +198,21 @@ pub(super) async fn do_sync(
         .platform(venv.interpreter().platform())
         .build();
 
+    // Determine whether to enable build isolation.
+    let build_isolation = if no_build_isolation {
+        BuildIsolation::Shared(venv)
+    } else {
+        BuildIsolation::Isolated
+    };
+
     // TODO(charlie): These are all default values. We should consider whether we want to make them
     // optional on the downstream APIs.
-    let build_isolation = BuildIsolation::default();
+    let build_constraints = [];
     let dry_run = false;
-    let hasher = HashStrategy::default();
     let setup_py = SetupPyStrategy::default();
+
+    // Extract the hashes from the lockfile.
+    let hasher = HashStrategy::from_resolution(&resolution, HashCheckingMode::Verify)?;
 
     // Resolve the flat indexes from `--find-links`.
     let flat_index = {
@@ -246,6 +225,7 @@ pub(super) async fn do_sync(
     let build_dispatch = BuildDispatch::new(
         &client,
         cache,
+        &build_constraints,
         venv.interpreter(),
         index_locations,
         &flat_index,
@@ -259,6 +239,7 @@ pub(super) async fn do_sync(
         link_mode,
         build_options,
         exclude_newer,
+        sources,
         concurrency,
         preview,
     );
@@ -283,6 +264,7 @@ pub(super) async fn do_sync(
         &build_dispatch,
         cache,
         venv,
+        logger,
         dry_run,
         printer,
         preview,

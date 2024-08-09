@@ -38,7 +38,7 @@ use std::str::FromStr;
 
 use url::Url;
 
-use distribution_filename::WheelFilename;
+use distribution_filename::{DistExtension, SourceDistExtension, WheelFilename};
 use pep440_rs::Version;
 use pep508_rs::{Pep508Url, VerbatimUrl};
 use pypi_types::{ParsedUrl, VerbatimParsedUrl};
@@ -87,6 +87,16 @@ pub enum VersionOrUrlRef<'a, T: Pep508Url = VerbatimUrl> {
     Url(&'a T),
 }
 
+impl<'a, T: Pep508Url> VersionOrUrlRef<'a, T> {
+    /// If it is a URL, return its value.
+    pub fn url(&self) -> Option<&T> {
+        match self {
+            VersionOrUrlRef::Version(_) => None,
+            VersionOrUrlRef::Url(url) => Some(url),
+        }
+    }
+}
+
 impl Verbatim for VersionOrUrlRef<'_> {
     fn verbatim(&self) -> Cow<'_, str> {
         match self {
@@ -126,14 +136,14 @@ impl std::fmt::Display for InstalledVersion<'_> {
 /// Either a built distribution, a wheel, or a source distribution that exists at some location.
 ///
 /// The location can be an index, URL or path (wheel), or index, URL, path or Git repository (source distribution).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Dist {
     Built(BuiltDist),
     Source(SourceDist),
 }
 
 /// A wheel, with its three possible origins (index, url, path)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltDist {
     Registry(RegistryBuiltDist),
@@ -142,7 +152,7 @@ pub enum BuiltDist {
 }
 
 /// A source distribution, with its possible origins (index, url, path, git)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 #[allow(clippy::large_enum_variant)]
 pub enum SourceDist {
     Registry(RegistrySourceDist),
@@ -153,7 +163,7 @@ pub enum SourceDist {
 }
 
 /// A built distribution (wheel) that exists in a registry, like `PyPI`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct RegistryBuiltWheel {
     pub filename: WheelFilename,
     pub file: Box<File>,
@@ -161,7 +171,7 @@ pub struct RegistryBuiltWheel {
 }
 
 /// A built distribution (wheel) that exists in a registry, like `PyPI`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct RegistryBuiltDist {
     /// All wheels associated with this distribution. It is guaranteed
     /// that there is at least one wheel.
@@ -191,7 +201,7 @@ pub struct RegistryBuiltDist {
 }
 
 /// A built distribution (wheel) that exists at an arbitrary URL.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct DirectUrlBuiltDist {
     /// We require that wheel urls end in the full wheel filename, e.g.
     /// `https://example.org/packages/flask-3.0.0-py3-none-any.whl`
@@ -203,7 +213,7 @@ pub struct DirectUrlBuiltDist {
 }
 
 /// A built distribution (wheel) that exists in a local directory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct PathBuiltDist {
     pub filename: WheelFilename,
     /// The path to the wheel.
@@ -213,24 +223,26 @@ pub struct PathBuiltDist {
 }
 
 /// A source distribution that exists in a registry, like `PyPI`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct RegistrySourceDist {
     pub name: PackageName,
     pub version: Version,
     pub file: Box<File>,
+    /// The file extension, e.g. `tar.gz`, `zip`, etc.
+    pub ext: SourceDistExtension,
     pub index: IndexUrl,
     /// When an sdist is selected, it may be the case that there were
     /// available wheels too. There are many reasons why a wheel might not
     /// have been chosen (maybe none available are compatible with the
     /// current environment), but we still want to track that they exist. In
-    /// particular, for generating a universal lock file, we do not want to
-    /// skip emitting wheels to the lock file just because the host generating
-    /// the lock file didn't have any compatible wheels available.
+    /// particular, for generating a universal lockfile, we do not want to
+    /// skip emitting wheels to the lockfile just because the host generating
+    /// the lockfile didn't have any compatible wheels available.
     pub wheels: Vec<RegistryBuiltWheel>,
 }
 
 /// A source distribution that exists at an arbitrary URL.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct DirectUrlSourceDist {
     /// Unlike [`DirectUrlBuiltDist`], we can't require a full filename with a version here, people
     /// like using e.g. `foo @ https://github.com/org/repo/archive/master.zip`
@@ -239,12 +251,14 @@ pub struct DirectUrlSourceDist {
     pub location: Url,
     /// The subdirectory within the archive in which the source distribution is located.
     pub subdirectory: Option<PathBuf>,
+    /// The file extension, e.g. `tar.gz`, `zip`, etc.
+    pub ext: SourceDistExtension,
     /// The URL as it was provided by the user, including the subdirectory fragment.
     pub url: VerbatimUrl,
 }
 
 /// A source distribution that exists in a Git repository.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct GitSourceDist {
     pub name: PackageName,
     /// The URL without the revision and subdirectory fragment.
@@ -256,7 +270,7 @@ pub struct GitSourceDist {
 }
 
 /// A source distribution that exists in a local archive (e.g., a `.tar.gz` file).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct PathSourceDist {
     pub name: PackageName,
     /// The resolved, absolute path to the distribution which we use for installing.
@@ -265,12 +279,14 @@ pub struct PathSourceDist {
     /// which we use for locking. Unlike `given` on the verbatim URL all environment variables
     /// are resolved, and unlike the install path, we did not yet join it on the base directory.
     pub lock_path: PathBuf,
+    /// The file extension, e.g. `tar.gz`, `zip`, etc.
+    pub ext: SourceDistExtension,
     /// The URL as it was provided by the user.
     pub url: VerbatimUrl,
 }
 
 /// A source distribution that exists in a local directory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct DirectorySourceDist {
     pub name: PackageName,
     /// The resolved, absolute path to the distribution which we use for installing.
@@ -293,33 +309,35 @@ impl Dist {
         url: VerbatimUrl,
         location: Url,
         subdirectory: Option<PathBuf>,
+        ext: DistExtension,
     ) -> Result<Dist, Error> {
-        if Path::new(url.path())
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("whl"))
-        {
-            // Validate that the name in the wheel matches that of the requirement.
-            let filename = WheelFilename::from_str(&url.filename()?)?;
-            if filename.name != name {
-                return Err(Error::PackageNameMismatch(
-                    name,
-                    filename.name,
-                    url.verbatim().to_string(),
-                ));
-            }
+        match ext {
+            DistExtension::Wheel => {
+                // Validate that the name in the wheel matches that of the requirement.
+                let filename = WheelFilename::from_str(&url.filename()?)?;
+                if filename.name != name {
+                    return Err(Error::PackageNameMismatch(
+                        name,
+                        filename.name,
+                        url.verbatim().to_string(),
+                    ));
+                }
 
-            Ok(Self::Built(BuiltDist::DirectUrl(DirectUrlBuiltDist {
-                filename,
-                location,
-                url,
-            })))
-        } else {
-            Ok(Self::Source(SourceDist::DirectUrl(DirectUrlSourceDist {
-                name,
-                location,
-                subdirectory,
-                url,
-            })))
+                Ok(Self::Built(BuiltDist::DirectUrl(DirectUrlBuiltDist {
+                    filename,
+                    location,
+                    url,
+                })))
+            }
+            DistExtension::Source(ext) => {
+                Ok(Self::Source(SourceDist::DirectUrl(DirectUrlSourceDist {
+                    name,
+                    location,
+                    subdirectory,
+                    ext,
+                    url,
+                })))
+            }
         }
     }
 
@@ -329,6 +347,7 @@ impl Dist {
         url: VerbatimUrl,
         install_path: &Path,
         lock_path: &Path,
+        ext: DistExtension,
     ) -> Result<Dist, Error> {
         // Store the canonicalized path, which also serves to validate that it exists.
         let canonicalized_path = match install_path.canonicalize() {
@@ -340,31 +359,30 @@ impl Dist {
         };
 
         // Determine whether the path represents a built or source distribution.
-        if canonicalized_path
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("whl"))
-        {
-            // Validate that the name in the wheel matches that of the requirement.
-            let filename = WheelFilename::from_str(&url.filename()?)?;
-            if filename.name != name {
-                return Err(Error::PackageNameMismatch(
-                    name,
-                    filename.name,
-                    url.verbatim().to_string(),
-                ));
+        match ext {
+            DistExtension::Wheel => {
+                // Validate that the name in the wheel matches that of the requirement.
+                let filename = WheelFilename::from_str(&url.filename()?)?;
+                if filename.name != name {
+                    return Err(Error::PackageNameMismatch(
+                        name,
+                        filename.name,
+                        url.verbatim().to_string(),
+                    ));
+                }
+                Ok(Self::Built(BuiltDist::Path(PathBuiltDist {
+                    filename,
+                    path: canonicalized_path,
+                    url,
+                })))
             }
-            Ok(Self::Built(BuiltDist::Path(PathBuiltDist {
-                filename,
-                path: canonicalized_path,
-                url,
-            })))
-        } else {
-            Ok(Self::Source(SourceDist::Path(PathSourceDist {
+            DistExtension::Source(ext) => Ok(Self::Source(SourceDist::Path(PathSourceDist {
                 name,
                 install_path: canonicalized_path.clone(),
                 lock_path: lock_path.to_path_buf(),
+                ext,
                 url,
-            })))
+            }))),
         }
     }
 
@@ -413,12 +431,20 @@ impl Dist {
     /// Create a [`Dist`] for a URL-based distribution.
     pub fn from_url(name: PackageName, url: VerbatimParsedUrl) -> Result<Self, Error> {
         match url.parsed_url {
-            ParsedUrl::Archive(archive) => {
-                Self::from_http_url(name, url.verbatim, archive.url, archive.subdirectory)
-            }
-            ParsedUrl::Path(file) => {
-                Self::from_file_url(name, url.verbatim, &file.install_path, &file.lock_path)
-            }
+            ParsedUrl::Archive(archive) => Self::from_http_url(
+                name,
+                url.verbatim,
+                archive.url,
+                archive.subdirectory,
+                archive.ext,
+            ),
+            ParsedUrl::Path(file) => Self::from_file_url(
+                name,
+                url.verbatim,
+                &file.install_path,
+                &file.lock_path,
+                file.ext,
+            ),
             ParsedUrl::Directory(directory) => Self::from_directory_url(
                 name,
                 url.verbatim,
@@ -743,10 +769,30 @@ impl RemoteSource for Url {
         // Identify the last segment of the URL as the filename.
         let path_segments = self
             .path_segments()
-            .ok_or_else(|| Error::MissingPathSegments(self.clone()))?;
+            .ok_or_else(|| Error::MissingPathSegments(self.to_string()))?;
 
         // This is guaranteed by the contract of `Url::path_segments`.
         let last = path_segments.last().expect("path segments is non-empty");
+
+        // Decode the filename, which may be percent-encoded.
+        let filename = urlencoding::decode(last)?;
+
+        Ok(filename)
+    }
+
+    fn size(&self) -> Option<u64> {
+        None
+    }
+}
+
+impl RemoteSource for UrlString {
+    fn filename(&self) -> Result<Cow<'_, str>, Error> {
+        // Take the last segment, stripping any query or fragment.
+        let last = self
+            .base()
+            .split('/')
+            .last()
+            .ok_or_else(|| Error::MissingPathSegments(self.to_string()))?;
 
         // Decode the filename, which may be percent-encoded.
         let filename = urlencoding::decode(last)?;
@@ -1215,7 +1261,8 @@ impl Identifier for BuildableSource<'_> {
 
 #[cfg(test)]
 mod test {
-    use crate::{BuiltDist, Dist, SourceDist};
+    use crate::{BuiltDist, Dist, RemoteSource, SourceDist, UrlString};
+    use url::Url;
 
     /// Ensure that we don't accidentally grow the `Dist` sizes.
     #[test]
@@ -1231,9 +1278,26 @@ mod test {
             std::mem::size_of::<BuiltDist>()
         );
         assert!(
-            std::mem::size_of::<SourceDist>() <= 256,
+            std::mem::size_of::<SourceDist>() <= 264,
             "{}",
             std::mem::size_of::<SourceDist>()
         );
+    }
+
+    #[test]
+    fn remote_source() {
+        for url in [
+            "https://example.com/foo-0.1.0.tar.gz",
+            "https://example.com/foo-0.1.0.tar.gz#fragment",
+            "https://example.com/foo-0.1.0.tar.gz?query",
+            "https://example.com/foo-0.1.0.tar.gz?query#fragment",
+            "https://example.com/foo-0.1.0.tar.gz?query=1/2#fragment",
+            "https://example.com/foo-0.1.0.tar.gz?query=1/2#fragment/3",
+        ] {
+            let url = Url::parse(url).unwrap();
+            assert_eq!(url.filename().unwrap(), "foo-0.1.0.tar.gz", "{url}");
+            let url = UrlString::from(url.clone());
+            assert_eq!(url.filename().unwrap(), "foo-0.1.0.tar.gz", "{url}");
+        }
     }
 }

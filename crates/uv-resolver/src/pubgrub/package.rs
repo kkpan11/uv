@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use pep508_rs::MarkerTree;
+use pep508_rs::{MarkerTree, MarkerTreeContents};
 use uv_normalize::{ExtraName, GroupName, PackageName};
 
 /// [`Arc`] wrapper around [`PubGrubPackageInner`] to make cloning (inside PubGrub) cheap.
@@ -42,11 +42,14 @@ pub enum PubGrubPackageInner {
     /// A Python version.
     Python(PubGrubPython),
     /// A Python package.
+    ///
+    /// Note that it is guaranteed that `extra` and `dev` are never both
+    /// `Some`. That is, if one is `Some` then the other must be `None`.
     Package {
         name: PackageName,
         extra: Option<ExtraName>,
         dev: Option<GroupName>,
-        marker: Option<MarkerTree>,
+        marker: Option<MarkerTreeContents>,
     },
     /// A proxy package to represent a dependency with an extra (e.g., `black[colorama]`).
     ///
@@ -64,7 +67,7 @@ pub enum PubGrubPackageInner {
     Extra {
         name: PackageName,
         extra: ExtraName,
-        marker: Option<MarkerTree>,
+        marker: Option<MarkerTreeContents>,
     },
     /// A proxy package to represent an enabled "dependency group" (e.g., development dependencies).
     ///
@@ -74,7 +77,7 @@ pub enum PubGrubPackageInner {
     Dev {
         name: PackageName,
         dev: GroupName,
-        marker: Option<MarkerTree>,
+        marker: Option<MarkerTreeContents>,
     },
     /// A proxy package for a base package with a marker (e.g., `black; python_version >= "3.6"`).
     ///
@@ -82,7 +85,7 @@ pub enum PubGrubPackageInner {
     /// rather than the `Marker` variant.
     Marker {
         name: PackageName,
-        marker: MarkerTree,
+        marker: MarkerTreeContents,
     },
 }
 
@@ -91,14 +94,16 @@ impl PubGrubPackage {
     pub(crate) fn from_package(
         name: PackageName,
         extra: Option<ExtraName>,
-        mut marker: Option<MarkerTree>,
+        marker: Option<MarkerTree>,
     ) -> Self {
         // Remove all extra expressions from the marker, since we track extras
         // separately. This also avoids an issue where packages added via
         // extras end up having two distinct marker expressions, which in turn
         // makes them two distinct packages. This results in PubGrub being
         // unable to unify version constraints across such packages.
-        marker = marker.and_then(|m| m.simplify_extras_with(|_| true));
+        let marker = marker
+            .map(|m| m.simplify_extras_with(|_| true))
+            .and_then(|marker| marker.contents());
         if let Some(extra) = extra {
             Self(Arc::new(PubGrubPackageInner::Extra {
                 name,
@@ -152,9 +157,21 @@ impl PubGrubPackage {
             PubGrubPackageInner::Root(_) | PubGrubPackageInner::Python(_) => None,
             PubGrubPackageInner::Package { marker, .. }
             | PubGrubPackageInner::Extra { marker, .. }
-            | PubGrubPackageInner::Dev { marker, .. } => marker.as_ref(),
-            PubGrubPackageInner::Marker { marker, .. } => Some(marker),
+            | PubGrubPackageInner::Dev { marker, .. } => {
+                marker.as_ref().map(MarkerTreeContents::as_ref)
+            }
+            PubGrubPackageInner::Marker { marker, .. } => Some(marker.as_ref()),
         }
+    }
+
+    /// Returns `true` if this PubGrub package is a proxy package.
+    pub fn is_proxy(&self) -> bool {
+        matches!(
+            &**self,
+            PubGrubPackageInner::Extra { .. }
+                | PubGrubPackageInner::Dev { .. }
+                | PubGrubPackageInner::Marker { .. }
+        )
     }
 }
 

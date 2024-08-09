@@ -22,7 +22,6 @@ use uv_fs::{LockedFile, Simplified};
 use uv_installer::SitePackages;
 use uv_python::{Interpreter, PythonEnvironment};
 use uv_state::{StateBucket, StateStore};
-use uv_warnings::warn_user_once;
 
 mod receipt;
 mod tool;
@@ -30,7 +29,7 @@ mod tool;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    IO(#[from] io::Error),
+    Io(#[from] io::Error),
     #[error("Failed to update `uv-receipt.toml` at {0}")]
     ReceiptWrite(PathBuf, #[source] Box<toml::ser::Error>),
     #[error("Failed to read `uv-receipt.toml` at {0}")]
@@ -51,8 +50,10 @@ pub enum Error {
     MissingToolReceipt(String, PathBuf),
     #[error("Failed to read tool environment packages at `{0}`: {1}")]
     EnvironmentRead(PathBuf, String),
-    #[error("Failed find tool package `{0}` at `{1}`")]
-    MissingToolPackage(PackageName, PathBuf),
+    #[error("Failed find package `{0}` in tool environment")]
+    MissingToolPackage(PackageName),
+    #[error(transparent)]
+    Serialization(#[from] toml_edit::ser::Error),
 }
 
 /// A collection of uv-managed tools installed on the current system.
@@ -85,38 +86,55 @@ impl InstalledTools {
         }
     }
 
+    /// Return the expected directory for a tool with the given [`PackageName`].
+    pub fn tool_dir(&self, name: &PackageName) -> PathBuf {
+        self.root.join(name.to_string())
+    }
+
     /// Return the metadata for all installed tools.
     ///
+    /// If a tool is present, but is missing a receipt or the receipt is invalid, the tool will be
+    /// included with an error.
+    ///
     /// Note it is generally incorrect to use this without [`Self::acquire_lock`].
-    pub fn tools(&self) -> Result<Vec<(PackageName, Tool)>, Error> {
+    #[allow(clippy::type_complexity)]
+    pub fn tools(&self) -> Result<Vec<(PackageName, Result<Tool, Error>)>, Error> {
         let mut tools = Vec::new();
         for directory in uv_fs::directories(self.root()) {
             let name = directory.file_name().unwrap().to_string_lossy().to_string();
+            let name = PackageName::from_str(&name)?;
             let path = directory.join("uv-receipt.toml");
             let contents = match fs_err::read_to_string(&path) {
                 Ok(contents) => contents,
                 Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                    warn_user_once!("Ignoring malformed tool `{name}`: missing receipt");
+                    let err = Error::MissingToolReceipt(name.to_string(), path);
+                    tools.push((name, Err(err)));
                     continue;
                 }
                 Err(err) => return Err(err.into()),
             };
-            let tool_receipt = ToolReceipt::from_string(contents)
-                .map_err(|err| Error::ReceiptRead(path, Box::new(err)))?;
-            let name = PackageName::from_str(&name)?;
-            tools.push((name, tool_receipt.tool));
+            match ToolReceipt::from_string(contents) {
+                Ok(tool_receipt) => tools.push((name, Ok(tool_receipt.tool))),
+                Err(err) => {
+                    let err = Error::ReceiptRead(path, Box::new(err));
+                    tools.push((name, Err(err)));
+                }
+            }
         }
         Ok(tools)
     }
 
     /// Get the receipt for the given tool.
     ///
+    /// If the tool is not installed, returns `Ok(None)`. If the receipt is invalid, returns an
+    /// error.
+    ///
     /// Note it is generally incorrect to use this without [`Self::acquire_lock`].
     pub fn get_tool_receipt(&self, name: &PackageName) -> Result<Option<Tool>, Error> {
-        let path = self.root.join(name.to_string()).join("uv-receipt.toml");
+        let path = self.tool_dir(name).join("uv-receipt.toml");
         match ToolReceipt::from_path(&path) {
             Ok(tool_receipt) => Ok(Some(tool_receipt.tool)),
-            Err(Error::IO(err)) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(Error::Io(err)) if err.kind() == io::ErrorKind::NotFound => Ok(None),
             Err(err) => Err(err),
         }
     }
@@ -136,14 +154,14 @@ impl InstalledTools {
     /// Note it is generally incorrect to use this without [`Self::acquire_lock`].
     pub fn add_tool_receipt(&self, name: &PackageName, tool: Tool) -> Result<(), Error> {
         let tool_receipt = ToolReceipt::from(tool);
-        let path = self.root.join(name.to_string()).join("uv-receipt.toml");
+        let path = self.tool_dir(name).join("uv-receipt.toml");
 
         debug!(
             "Adding metadata entry for tool `{name}` at {}",
             path.user_display()
         );
 
-        let doc = tool_receipt.to_toml();
+        let doc = tool_receipt.to_toml()?;
 
         // Save the modified `uv-receipt.toml`.
         fs_err::write(&path, doc)?;
@@ -161,7 +179,7 @@ impl InstalledTools {
     ///
     /// If no such environment exists for the tool.
     pub fn remove_environment(&self, name: &PackageName) -> Result<(), Error> {
-        let environment_path = self.root.join(name.to_string());
+        let environment_path = self.tool_dir(name);
 
         debug!(
             "Deleting environment for tool `{name}` at {}",
@@ -184,7 +202,7 @@ impl InstalledTools {
         name: &PackageName,
         cache: &Cache,
     ) -> Result<Option<PythonEnvironment>, Error> {
-        let environment_path = self.root.join(name.to_string());
+        let environment_path = self.tool_dir(name);
 
         match PythonEnvironment::from_root(&environment_path, cache) {
             Ok(venv) => {
@@ -216,7 +234,7 @@ impl InstalledTools {
         name: &PackageName,
         interpreter: Interpreter,
     ) -> Result<PythonEnvironment, Error> {
-        let environment_path = self.root.join(name.to_string());
+        let environment_path = self.tool_dir(name);
 
         // Remove any existing environment.
         match fs_err::remove_dir_all(&environment_path) {
@@ -242,6 +260,7 @@ impl InstalledTools {
             uv_virtualenv::Prompt::None,
             false,
             false,
+            false,
         )?;
 
         Ok(venv)
@@ -254,15 +273,16 @@ impl InstalledTools {
         ))
     }
 
+    /// Return the [`Version`] of an installed tool.
     pub fn version(&self, name: &PackageName, cache: &Cache) -> Result<Version, Error> {
-        let environment_path = self.root.join(name.to_string());
+        let environment_path = self.tool_dir(name);
         let environment = PythonEnvironment::from_root(&environment_path, cache)?;
         let site_packages = SitePackages::from_environment(&environment)
             .map_err(|err| Error::EnvironmentRead(environment_path.clone(), err.to_string()))?;
         let packages = site_packages.get_packages(name);
         let package = packages
             .first()
-            .ok_or_else(|| Error::MissingToolPackage(name.clone(), environment_path))?;
+            .ok_or_else(|| Error::MissingToolPackage(name.clone()))?;
         Ok(package.version().clone())
     }
 
@@ -356,22 +376,17 @@ pub fn find_executable_directory() -> Result<PathBuf, Error> {
 }
 
 /// Find the `.dist-info` directory for a package in an environment.
-fn find_dist_info(
-    environment: &PythonEnvironment,
+fn find_dist_info<'a>(
+    site_packages: &'a SitePackages,
     package_name: &PackageName,
     package_version: &Version,
-) -> Result<PathBuf, Error> {
-    let dist_info_prefix = format!(
-        "{}-{}.dist-info",
-        package_name.as_dist_info_name(),
-        package_version
-    );
-    environment
-        .interpreter()
-        .site_packages()
-        .map(|path| path.join(&dist_info_prefix))
-        .find(|path| path.is_dir())
-        .ok_or_else(|| Error::DistInfoMissing(dist_info_prefix, environment.root().to_path_buf()))
+) -> Result<&'a Path, Error> {
+    site_packages
+        .get_packages(package_name)
+        .iter()
+        .find(|package| package.version() == package_version)
+        .map(|dist| dist.path())
+        .ok_or_else(|| Error::MissingToolPackage(package_name.clone()))
 }
 
 /// Find the paths to the entry points provided by a package in an environment.
@@ -381,12 +396,12 @@ fn find_dist_info(
 ///
 /// Returns a list of `(name, path)` tuples.
 pub fn entrypoint_paths(
-    environment: &PythonEnvironment,
+    site_packages: &SitePackages,
     package_name: &PackageName,
     package_version: &Version,
 ) -> Result<Vec<(String, PathBuf)>, Error> {
     // Find the `.dist-info` directory in the installed environment.
-    let dist_info_path = find_dist_info(environment, package_name, package_version)?;
+    let dist_info_path = find_dist_info(site_packages, package_name, package_version)?;
     debug!(
         "Looking at `.dist-info` at: {}",
         dist_info_path.user_display()
@@ -396,7 +411,7 @@ pub fn entrypoint_paths(
     let record = read_record_file(&mut File::open(dist_info_path.join("RECORD"))?)?;
 
     // The RECORD file uses relative paths, so we're looking for the relative path to be a prefix.
-    let layout = environment.interpreter().layout();
+    let layout = site_packages.interpreter().layout();
     let script_relative = pathdiff::diff_paths(&layout.scheme.scripts, &layout.scheme.purelib)
         .ok_or_else(|| {
             io::Error::new(

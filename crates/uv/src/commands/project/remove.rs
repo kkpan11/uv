@@ -4,21 +4,26 @@ use pep508_rs::PackageName;
 use uv_cache::Cache;
 use uv_client::Connectivity;
 use uv_configuration::{Concurrency, ExtrasSpecification, PreviewMode};
-use uv_distribution::pyproject::DependencyType;
-use uv_distribution::pyproject_mut::PyProjectTomlMut;
-use uv_distribution::{ProjectWorkspace, VirtualProject, Workspace};
+use uv_fs::CWD;
 use uv_python::{PythonFetch, PythonPreference, PythonRequest};
 use uv_warnings::{warn_user, warn_user_once};
+use uv_workspace::pyproject::DependencyType;
+use uv_workspace::pyproject_mut::PyProjectTomlMut;
+use uv_workspace::{DiscoveryOptions, ProjectWorkspace, VirtualProject, Workspace};
 
+use crate::commands::pip::loggers::{DefaultInstallLogger, DefaultResolveLogger};
 use crate::commands::pip::operations::Modifications;
-use crate::commands::project::lock::commit;
 use crate::commands::{project, ExitStatus, SharedState};
 use crate::printer::Printer;
 use crate::settings::ResolverInstallerSettings;
 
 /// Remove one or more packages from the project requirements.
+#[allow(clippy::fn_params_excessive_bools)]
 pub(crate) async fn remove(
-    requirements: Vec<PackageName>,
+    locked: bool,
+    frozen: bool,
+    no_sync: bool,
+    packages: Vec<PackageName>,
     dependency_type: DependencyType,
     package: Option<PackageName>,
     python: Option<String>,
@@ -33,44 +38,46 @@ pub(crate) async fn remove(
     printer: Printer,
 ) -> Result<ExitStatus> {
     if preview.is_disabled() {
-        warn_user_once!("`uv remove` is experimental and may change without warning.");
+        warn_user_once!("`uv remove` is experimental and may change without warning");
     }
 
     // Find the project in the workspace.
     let project = if let Some(package) = package {
-        Workspace::discover(&std::env::current_dir()?, None)
+        Workspace::discover(&CWD, &DiscoveryOptions::default())
             .await?
             .with_current_project(package.clone())
             .with_context(|| format!("Package `{package}` not found in workspace"))?
     } else {
-        ProjectWorkspace::discover(&std::env::current_dir()?, None).await?
+        ProjectWorkspace::discover(&CWD, &DiscoveryOptions::default()).await?
     };
 
     let mut pyproject = PyProjectTomlMut::from_toml(project.current_project().pyproject_toml())?;
-    for req in requirements {
+    for package in packages {
         match dependency_type {
             DependencyType::Production => {
-                let deps = pyproject.remove_dependency(&req)?;
+                let deps = pyproject.remove_dependency(&package)?;
                 if deps.is_empty() {
-                    warn_if_present(&req, &pyproject);
-                    anyhow::bail!("The dependency `{req}` could not be found in `dependencies`");
+                    warn_if_present(&package, &pyproject);
+                    anyhow::bail!(
+                        "The dependency `{package}` could not be found in `dependencies`"
+                    );
                 }
             }
             DependencyType::Dev => {
-                let deps = pyproject.remove_dev_dependency(&req)?;
+                let deps = pyproject.remove_dev_dependency(&package)?;
                 if deps.is_empty() {
-                    warn_if_present(&req, &pyproject);
+                    warn_if_present(&package, &pyproject);
                     anyhow::bail!(
-                        "The dependency `{req}` could not be found in `dev-dependencies`"
+                        "The dependency `{package}` could not be found in `dev-dependencies`"
                     );
                 }
             }
             DependencyType::Optional(ref group) => {
-                let deps = pyproject.remove_optional_dependency(&req, group)?;
+                let deps = pyproject.remove_optional_dependency(&package, group)?;
                 if deps.is_empty() {
-                    warn_if_present(&req, &pyproject);
+                    warn_if_present(&package, &pyproject);
                     anyhow::bail!(
-                        "The dependency `{req}` could not be found in `optional-dependencies`"
+                        "The dependency `{package}` could not be found in `optional-dependencies`"
                     );
                 }
             }
@@ -82,6 +89,12 @@ pub(crate) async fn remove(
         project.current_project().root().join("pyproject.toml"),
         pyproject.to_string(),
     )?;
+
+    // If `--frozen`, exit early. There's no reason to lock and sync, and we don't need a `uv.lock`
+    // to exist at all.
+    if frozen {
+        return Ok(ExitStatus::Success);
+    }
 
     // Discover or create the virtual environment.
     let venv = project::get_or_init_environment(
@@ -96,19 +109,14 @@ pub(crate) async fn remove(
     )
     .await?;
 
-    // Initialize any shared state.
-    let state = SharedState::default();
-
-    // Read the existing lockfile.
-    let existing = project::lock::read(project.workspace()).await?;
-
     // Lock and sync the environment, if necessary.
-    let lock = project::lock::do_lock(
+    let lock = project::lock::do_safe_lock(
+        locked,
+        frozen,
         project.workspace(),
         venv.interpreter(),
-        existing.as_ref(),
         settings.as_ref().into(),
-        &state,
+        Box::new(DefaultResolveLogger),
         preview,
         connectivity,
         concurrency,
@@ -117,8 +125,9 @@ pub(crate) async fn remove(
         printer,
     )
     .await?;
-    if !existing.is_some_and(|existing| existing == lock) {
-        commit(&lock, project.workspace()).await?;
+
+    if no_sync {
+        return Ok(ExitStatus::Success);
     }
 
     // Perform a full sync, because we don't know what exactly is affected by the removal.
@@ -126,15 +135,19 @@ pub(crate) async fn remove(
     let extras = ExtrasSpecification::All;
     let dev = true;
 
+    // Initialize any shared state.
+    let state = SharedState::default();
+
     project::sync::do_sync(
         &VirtualProject::Project(project),
         &venv,
-        &lock,
-        extras,
+        &lock.lock,
+        &extras,
         dev,
         Modifications::Exact,
         settings.as_ref().into(),
         &state,
+        Box::new(DefaultInstallLogger),
         preview,
         connectivity,
         concurrency,

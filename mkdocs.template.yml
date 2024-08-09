@@ -1,17 +1,18 @@
 site_name: uv
 theme:
   name: material
-  favicon: assets/favicon.ico
+  logo: assets/logo-letter.svg
+  favicon: assets/favicon.svg
   features:
     - navigation.instant
     - navigation.instant.prefetch
     - navigation.instant.progress
     - navigation.expand
+    - navigation.indexes
     - navigation.tracking
     - content.code.annotate
-    - toc.integrate
     - toc.follow
-    - navigation.path
+    - navigation.footer
     - navigation.top
     - content.code.copy
     - content.tabs.link
@@ -64,43 +65,64 @@ plugins:
   - typeset
 extra_css:
   - stylesheets/extra.css
+extra_javascript:
+  - js/extra.js
 extra:
   analytics:
     provider: fathom
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/astral-sh/uv
+    - icon: fontawesome/brands/discord
+      link: https://discord.com/invite/astral-sh
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/uv/
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/astral_sh
 nav:
   - Introduction: index.md
   - Getting started:
-      - Installation: installation.md
-      - First steps: first-steps.md
+      - Installation: getting-started/installation.md
+      - First steps: getting-started/first-steps.md
+      - Features: getting-started/features.md
   - Guides:
+      - guides/index.md
       - Installing Python: guides/install-python.md
       - Running scripts: guides/scripts.md
       - Using tools: guides/tools.md
-      - Creating a project: guides/projects.md
+      - Working on projects: guides/projects.md
+      - Publishing packages: guides/publish.md
   - Concepts:
-      - Projects: preview/projects.md
-      - Command-line tools: preview/tools.md
-      - Python versions: python-versions.md
-      - Workspaces: preview/workspaces.md
-      - Dependency sources: preview/dependencies.md
-      - Resolution: resolution.md
-      - Caching: cache.md
-      - Authentication: configuration/authentication.md
+      - concepts/index.md
+      - Projects: concepts/projects.md
+      - Dependencies: concepts/dependencies.md
+      - Workspaces: concepts/workspaces.md
+      - Tools: concepts/tools.md
+      - Python versions: concepts/python-versions.md
+      - Resolution: concepts/resolution.md
+      - Caching: concepts/cache.md
   - Configuration:
+      - configuration/index.md
       - Configuration files: configuration/files.md
       - Environment variables: configuration/environment.md
-      - Settings: settings.md
+      - Authentication: configuration/authentication.md
   - Integration guides:
-      - Using in Docker: guides/docker.md
-      - Using in GitHub Actions: guides/github.md
-      - Using in pre-commit: guides/pre-commit.md
-  - Low-level operations:
+      - guides/integration/index.md
+      - Docker: guides/integration/docker.md
+      - GitHub Actions: guides/integration/github.md
+      - Pre-commit: guides/integration/pre-commit.md
+      - Alternative indexes: guides/integration/alternative-indexes.md
+  - The pip interface:
+      - pip/index.md
       - Using environments: pip/environments.md
       - Managing packages: pip/packages.md
       - Inspecting packages: pip/inspection.md
       - Declaring dependencies: pip/dependencies.md
       - Locking environments: pip/compile.md
-  - Policies:
-      - Versioning: versioning.md
-      - Platform support: platforms.md
       - Compatibility with pip: pip/compatibility.md
+  - Reference:
+      - Commands: reference/cli.md
+      - Settings: reference/settings.md
+      - Resolver: reference/resolver-internals.md
+      - Versioning: reference/versioning.md
+      - Platform support: reference/platforms.md

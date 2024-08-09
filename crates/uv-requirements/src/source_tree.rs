@@ -106,7 +106,8 @@ impl<'a, Context: BuildContext> SourceTreeResolver<'a, Context> {
                 origin: Some(origin.clone()),
                 marker: requirement
                     .marker
-                    .and_then(|marker| marker.simplify_extras(extras)),
+                    .map(|marker| marker.simplify_extras(extras))
+                    .filter(|marker| !marker.is_true()),
                 ..requirement
             })
             .collect();
@@ -129,7 +130,8 @@ impl<'a, Context: BuildContext> SourceTreeResolver<'a, Context> {
                 requirement.marker = requirement
                     .marker
                     .take()
-                    .and_then(|marker| marker.simplify_extras(&recursive.extras));
+                    .map(|marker| marker.simplify_extras(&recursive.extras))
+                    .filter(|marker| !marker.is_true());
             }
         }
 
@@ -172,7 +174,8 @@ impl<'a, Context: BuildContext> SourceTreeResolver<'a, Context> {
         };
         let source = SourceUrl::Directory(DirectorySourceUrl {
             url: &url,
-            path: Cow::Borrowed(source_tree),
+            install_path: Cow::Borrowed(source_tree),
+            lock_path: Cow::Borrowed(source_tree),
             editable: false,
         });
 
@@ -181,7 +184,8 @@ impl<'a, Context: BuildContext> SourceTreeResolver<'a, Context> {
         let hashes = match self.hasher {
             HashStrategy::None => HashPolicy::None,
             HashStrategy::Generate => HashPolicy::Generate,
-            HashStrategy::Validate { .. } => {
+            HashStrategy::Verify(_) => HashPolicy::Generate,
+            HashStrategy::Require(_) => {
                 return Err(anyhow::anyhow!(
                     "Hash-checking is not supported for local directories: {}",
                     path.user_display()

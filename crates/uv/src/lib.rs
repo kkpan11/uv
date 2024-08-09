@@ -1,4 +1,3 @@
-use std::env;
 use std::ffi::OsString;
 use std::fmt::Write;
 use std::io::stdout;
@@ -13,7 +12,7 @@ use owo_colors::OwoColorize;
 use tracing::{debug, instrument};
 
 use settings::PipTreeSettings;
-use uv_cache::Cache;
+use uv_cache::{Cache, Refresh};
 use uv_cli::{
     compat::CompatArgs, CacheCommand, CacheNamespace, Cli, Commands, PipCommand, PipNamespace,
     ProjectCommand,
@@ -22,9 +21,11 @@ use uv_cli::{PythonCommand, PythonNamespace, ToolCommand, ToolNamespace};
 #[cfg(feature = "self-update")]
 use uv_cli::{SelfCommand, SelfNamespace};
 use uv_configuration::Concurrency;
-use uv_distribution::Workspace;
+use uv_fs::CWD;
 use uv_requirements::RequirementsSource;
 use uv_settings::{Combine, FilesystemOptions};
+use uv_warnings::{warn_user, warn_user_once};
+use uv_workspace::{DiscoveryOptions, Workspace};
 
 use crate::commands::{ExitStatus, ToolRunCommand};
 use crate::printer::Printer;
@@ -62,24 +63,69 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
         uv_warnings::enable();
     }
 
+    // Switch directories as early as possible.
+    if let Some(directory) = cli.global_args.directory.as_ref() {
+        std::env::set_current_dir(directory)?;
+    }
+
+    // The `--isolated` argument is deprecated on preview APIs, and warns on non-preview APIs.
+    let deprecated_isolated = if cli.global_args.isolated {
+        match &*cli.command {
+            // Supports `--isolated` as its own argument, so we can't warn either way.
+            Commands::Tool(ToolNamespace {
+                command: ToolCommand::Uvx(_) | ToolCommand::Run(_),
+            }) => false,
+
+            // Supports `--isolated` as its own argument, so we can't warn either way.
+            Commands::Project(command) if matches!(**command, ProjectCommand::Run(_)) => false,
+
+            // `--isolated` moved to `--no-workspace`.
+            Commands::Project(command) if matches!(**command, ProjectCommand::Init(_)) => {
+                warn_user!("The `--isolated` flag is deprecated and has no effect. Instead, use `--no-config` to prevent uv from discovering configuration files or `--no-workspace` to prevent uv from adding the initialized project to the containing workspace.");
+                false
+            }
+
+            // Preview APIs. Ignore `--isolated` and warn.
+            Commands::Project(_) | Commands::Tool(_) | Commands::Python(_) => {
+                warn_user!("The `--isolated` flag is deprecated and has no effect. Instead, use `--no-config` to prevent uv from discovering configuration files.");
+                false
+            }
+
+            // Non-preview APIs. Continue to support `--isolated`, but warn.
+            _ => {
+                warn_user!("The `--isolated` flag is deprecated. Instead, use `--no-config` to prevent uv from discovering configuration files.");
+                true
+            }
+        }
+    } else {
+        false
+    };
+
     // Load configuration from the filesystem, prioritizing (in order):
     // 1. The configuration file specified on the command-line.
-    // 2. The configuration file in the current workspace (i.e., the `pyproject.toml` or `uv.toml`
-    //    file in the workspace root directory). If found, this file is combined with the user
-    //    configuration file.
-    // 3. The nearest `uv.toml` file in the directory tree, starting from the current directory. If
-    //    found, this file is combined with the user configuration file. In this case, we don't
-    //    search for `pyproject.toml` files, since we're not in a workspace.
+    // 2. The nearest configuration file (`uv.toml` or `pyproject.toml`) above the workspace root.
+    //    If found, this file is combined with the user configuration file.
+    // 3. The nearest configuration file (`uv.toml` or `pyproject.toml`) in the directory tree,
+    //    starting from the current directory.
     let filesystem = if let Some(config_file) = cli.config_file.as_ref() {
+        if config_file
+            .file_name()
+            .is_some_and(|file_name| file_name == "pyproject.toml")
+        {
+            warn_user!("The `--config-file` argument expects to receive a `uv.toml` file, not a `pyproject.toml`. If you're trying to run a command from another project, use the `--directory` argument instead.");
+        }
         Some(FilesystemOptions::from_file(config_file)?)
-    } else if cli.global_args.isolated {
+    } else if deprecated_isolated || cli.no_config {
         None
-    } else if let Ok(project) = Workspace::discover(&env::current_dir()?, None).await {
-        let project = FilesystemOptions::from_directory(project.install_path())?;
+    } else if matches!(&*cli.command, Commands::Tool(_)) {
+        // For commands that operate at the user-level, ignore local configuration.
+        FilesystemOptions::user()?
+    } else if let Ok(workspace) = Workspace::discover(&CWD, &DiscoveryOptions::default()).await {
+        let project = FilesystemOptions::find(workspace.install_path())?;
         let user = FilesystemOptions::user()?;
         project.combine(user)
     } else {
-        let project = FilesystemOptions::find(env::current_dir()?)?;
+        let project = FilesystemOptions::find(&*CWD)?;
         let user = FilesystemOptions::user()?;
         project.combine(user)
     };
@@ -109,6 +155,8 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
         Printer::Quiet
     } else if globals.verbose > 0 {
         Printer::Verbose
+    } else if globals.no_progress {
+        Printer::NoProgress
     } else {
         Printer::Default
     };
@@ -128,7 +176,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .break_words(false)
                 .word_separator(textwrap::WordSeparator::AsciiSpace)
                 .word_splitter(textwrap::WordSplitter::NoHyphenation)
-                .wrap_lines(env::var("UV_NO_WRAP").map(|_| false).unwrap_or(true))
+                .wrap_lines(std::env::var("UV_NO_WRAP").map(|_| false).unwrap_or(true))
                 .build(),
         )
     }))?;
@@ -176,7 +224,11 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .expect("failed to initialize global rayon pool");
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             let requirements = args
                 .src_file
@@ -193,11 +245,18 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .into_iter()
                 .map(RequirementsSource::from_overrides_txt)
                 .collect::<Vec<_>>();
+            let build_constraints = args
+                .build_constraint
+                .into_iter()
+                .map(RequirementsSource::from_constraints_txt)
+                .collect::<Vec<_>>();
 
             commands::pip_compile(
                 &requirements,
                 &constraints,
                 &overrides,
+                &build_constraints,
+                args.constraints_from_workspace,
                 args.overrides_from_workspace,
                 args.settings.extras,
                 args.settings.output_file.as_deref(),
@@ -224,11 +283,13 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 args.settings.config_setting,
                 globals.connectivity,
                 args.settings.no_build_isolation,
+                args.settings.no_build_isolation_package,
                 args.settings.build_options,
                 args.settings.python_version,
                 args.settings.python_platform,
                 args.settings.universal,
                 args.settings.exclude_newer,
+                args.settings.sources,
                 args.settings.annotation_style,
                 args.settings.link_mode,
                 args.settings.python,
@@ -258,7 +319,11 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .expect("failed to initialize global rayon pool");
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             let requirements = args
                 .src_file
@@ -270,14 +335,20 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .into_iter()
                 .map(RequirementsSource::from_constraints_txt)
                 .collect::<Vec<_>>();
+            let build_constraints = args
+                .build_constraint
+                .into_iter()
+                .map(RequirementsSource::from_constraints_txt)
+                .collect::<Vec<_>>();
 
             commands::pip_sync(
                 &requirements,
                 &constraints,
+                &build_constraints,
                 args.settings.reinstall,
                 args.settings.link_mode,
                 args.settings.compile_bytecode,
-                args.settings.require_hashes,
+                args.settings.hash_checking,
                 args.settings.index_locations,
                 args.settings.index_strategy,
                 args.settings.keyring_provider,
@@ -286,6 +357,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 globals.connectivity,
                 &args.settings.config_setting,
                 args.settings.no_build_isolation,
+                args.settings.no_build_isolation_package,
                 args.settings.build_options,
                 args.settings.python_version,
                 args.settings.python_platform,
@@ -296,6 +368,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 args.settings.break_system_packages,
                 args.settings.target,
                 args.settings.prefix,
+                args.settings.sources,
                 args.settings.concurrency,
                 globals.native_tls,
                 globals.preview,
@@ -320,7 +393,12 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .expect("failed to initialize global rayon pool");
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
+
             let requirements = args
                 .package
                 .into_iter()
@@ -343,10 +421,18 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 .map(RequirementsSource::from_overrides_txt)
                 .collect::<Vec<_>>();
 
+            let build_constraints = args
+                .build_constraint
+                .into_iter()
+                .map(RequirementsSource::from_overrides_txt)
+                .collect::<Vec<_>>();
+
             commands::pip_install(
                 &requirements,
                 &constraints,
                 &overrides,
+                &build_constraints,
+                args.constraints_from_workspace,
                 args.overrides_from_workspace,
                 &args.settings.extras,
                 args.settings.resolution,
@@ -359,16 +445,18 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 args.settings.reinstall,
                 args.settings.link_mode,
                 args.settings.compile_bytecode,
-                args.settings.require_hashes,
+                args.settings.hash_checking,
                 args.settings.setup_py,
                 globals.connectivity,
                 &args.settings.config_setting,
                 args.settings.no_build_isolation,
+                args.settings.no_build_isolation_package,
                 args.settings.build_options,
                 args.settings.python_version,
                 args.settings.python_platform,
                 args.settings.strict,
                 args.settings.exclude_newer,
+                args.settings.sources,
                 args.settings.python,
                 args.settings.system,
                 args.settings.break_system_packages,
@@ -453,7 +541,6 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
 
             commands::pip_list(
                 args.editable,
-                args.exclude_editable,
                 &args.exclude,
                 &args.format,
                 args.settings.strict,
@@ -494,6 +581,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             let cache = cache.init()?;
 
             commands::pip_tree(
+                args.show_version_specifiers,
                 args.depth,
                 args.prune,
                 args.package,
@@ -532,8 +620,11 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             commands::cache_clean(&args.package, &cache, printer)
         }
         Commands::Cache(CacheNamespace {
-            command: CacheCommand::Prune,
-        }) => commands::cache_prune(&cache, printer),
+            command: CacheCommand::Prune(args),
+        }) => {
+            show_settings!(args);
+            commands::cache_prune(args.ci, &cache, printer)
+        }
         Commands::Cache(CacheNamespace {
             command: CacheCommand::Dir,
         }) => {
@@ -542,6 +633,14 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
         }
         Commands::Venv(args) => {
             args.compat_args.validate()?;
+
+            if args.no_system {
+                warn_user_once!("The `--no-system` flag has no effect, a system Python interpreter is always used in `uv venv`");
+            }
+
+            if args.system {
+                warn_user_once!("The `--system` flag has no effect, a system Python interpreter is always used in `uv venv`");
+            }
 
             // Resolve the settings from the command-line arguments and workspace configuration.
             let args = settings::VenvSettings::resolve(args, filesystem);
@@ -578,6 +677,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 globals.preview,
                 &cache,
                 printer,
+                args.relocatable,
             )
             .await
         }
@@ -611,15 +711,32 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
+
+            let requirements = args
+                .with
+                .into_iter()
+                .map(RequirementsSource::from_package)
+                .chain(
+                    args.with_requirements
+                        .into_iter()
+                        .map(RequirementsSource::from_requirements_file),
+                )
+                .collect::<Vec<_>>();
+
             commands::tool_run(
                 args.command,
                 args.from,
-                args.with,
+                &requirements,
+                args.show_resolution || globals.verbose > 0,
                 args.python,
                 args.settings,
                 invocation_source,
-                globals.isolated,
+                args.isolated,
                 globals.preview,
                 globals.python_preference,
                 globals.python_fetch,
@@ -639,13 +756,29 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
+
+            let requirements = args
+                .with
+                .into_iter()
+                .map(RequirementsSource::from_package)
+                .chain(
+                    args.with_requirements
+                        .into_iter()
+                        .map(RequirementsSource::from_requirements_file),
+                )
+                .collect::<Vec<_>>();
 
             commands::tool_install(
                 args.package,
+                args.editable,
                 args.from,
+                &requirements,
                 args.python,
-                args.with,
                 args.force,
                 args.settings,
                 globals.preview,
@@ -669,7 +802,29 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             // Initialize the cache.
             let cache = cache.init()?;
 
-            commands::tool_list(globals.preview, &cache, printer).await
+            commands::tool_list(args.show_paths, globals.preview, &cache, printer).await
+        }
+        Commands::Tool(ToolNamespace {
+            command: ToolCommand::Upgrade(args),
+        }) => {
+            // Resolve the settings from the command-line arguments and workspace configuration.
+            let args = settings::ToolUpgradeSettings::resolve(args, filesystem);
+            show_settings!(args);
+
+            // Initialize the cache.
+            let cache = cache.init()?.with_refresh(args.refresh);
+
+            commands::tool_upgrade(
+                args.name,
+                globals.connectivity,
+                args.settings,
+                Concurrency::default(),
+                globals.native_tls,
+                &cache,
+                globals.preview,
+                printer,
+            )
+            .await
         }
         Commands::Tool(ToolNamespace {
             command: ToolCommand::Uninstall(args),
@@ -687,9 +842,13 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
             Ok(ExitStatus::Success)
         }
         Commands::Tool(ToolNamespace {
-            command: ToolCommand::Dir,
+            command: ToolCommand::Dir(args),
         }) => {
-            commands::tool_dir(globals.preview)?;
+            // Resolve the settings from the command-line arguments and workspace configuration.
+            let args = settings::ToolDirSettings::resolve(args, filesystem);
+            show_settings!(args);
+
+            commands::tool_dir(args.bin, globals.preview)?;
             Ok(ExitStatus::Success)
         }
         Commands::Python(PythonNamespace {
@@ -730,7 +889,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 globals.native_tls,
                 globals.connectivity,
                 globals.preview,
-                globals.isolated,
+                cli.no_config,
                 &cache,
                 printer,
             )
@@ -777,6 +936,7 @@ async fn run(cli: Cli) -> Result<ExitStatus> {
                 args.resolved,
                 globals.python_preference,
                 globals.preview,
+                args.no_workspace,
                 &cache,
                 printer,
             )
@@ -815,29 +975,67 @@ async fn run_project(
     }
 
     match *project_command {
+        ProjectCommand::Init(args) => {
+            // Resolve the settings from the command-line arguments and workspace configuration.
+            let args = settings::InitSettings::resolve(args, filesystem);
+            show_settings!(args);
+
+            // Initialize the cache.
+            let cache = cache.init()?;
+
+            commands::init(
+                args.path,
+                args.name,
+                args.r#virtual,
+                args.no_readme,
+                args.python,
+                args.no_workspace,
+                globals.preview,
+                globals.python_preference,
+                globals.python_fetch,
+                globals.connectivity,
+                globals.native_tls,
+                &cache,
+                printer,
+            )
+            .await
+        }
         ProjectCommand::Run(args) => {
             // Resolve the settings from the command-line arguments and workspace configuration.
             let args = settings::RunSettings::resolve(args, filesystem);
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             let requirements = args
                 .with
                 .into_iter()
                 .map(RequirementsSource::from_package)
+                .chain(
+                    args.with_requirements
+                        .into_iter()
+                        .map(RequirementsSource::from_requirements_file),
+                )
                 .collect::<Vec<_>>();
 
             commands::run(
                 args.command,
                 requirements,
+                args.show_resolution || globals.verbose > 0,
+                args.locked,
+                args.frozen,
+                args.isolated,
                 args.package,
+                args.no_project,
                 args.extras,
                 args.dev,
                 args.python,
                 args.settings,
-                globals.isolated,
                 globals.preview,
                 globals.python_preference,
                 globals.python_fetch,
@@ -855,11 +1053,16 @@ async fn run_project(
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             commands::sync(
                 args.locked,
                 args.frozen,
+                args.package,
                 args.extras,
                 args.dev,
                 args.modifications,
@@ -882,9 +1085,11 @@ async fn run_project(
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?;
 
             commands::lock(
+                args.locked,
+                args.frozen,
                 args.python,
                 args.settings,
                 globals.preview,
@@ -904,9 +1109,16 @@ async fn run_project(
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             commands::add(
+                args.locked,
+                args.frozen,
+                args.no_sync,
                 args.requirements,
                 args.editable,
                 args.dependency_type,
@@ -935,10 +1147,17 @@ async fn run_project(
             show_settings!(args);
 
             // Initialize the cache.
-            let cache = cache.init()?.with_refresh(args.refresh);
+            let cache = cache.init()?.with_refresh(
+                args.refresh
+                    .combine(Refresh::from(args.settings.reinstall.clone()))
+                    .combine(Refresh::from(args.settings.upgrade.clone())),
+            );
 
             commands::remove(
-                args.requirements,
+                args.locked,
+                args.frozen,
+                args.no_sync,
+                args.packages,
                 args.dependency_type,
                 args.package,
                 args.python,
@@ -963,11 +1182,16 @@ async fn run_project(
             let cache = cache.init()?;
 
             commands::tree(
+                args.locked,
+                args.frozen,
+                args.universal,
                 args.depth,
                 args.prune,
                 args.package,
                 args.no_dedupe,
                 args.invert,
+                args.python_version,
+                args.python_platform,
                 args.python,
                 args.resolver,
                 globals.python_preference,
@@ -987,7 +1211,7 @@ async fn run_project(
 /// The main entry point for a uv invocation.
 ///
 /// WARNING: This entry point is not recommended for external consumption, the
-/// `uv` binary interface is the official public API. When using this entry
+/// uv binary interface is the official public API. When using this entry
 /// point, uv assumes it is running in a process it controls and that the
 /// entire process lifetime is managed by uv. Unexpected behavior may be
 /// encountered if this entry pointis called multiple times in a single process.
@@ -1064,7 +1288,7 @@ where
     // We support increasing the stack size to avoid stack overflows in debug mode on Windows. In
     // addition, we box types and futures in various places. This includes the `Box::pin(run())`
     // here, which prevents the large (non-send) main future alone from overflowing the stack.
-    let result = if let Ok(stack_size) = env::var("UV_STACK_SIZE") {
+    let result = if let Ok(stack_size) = std::env::var("UV_STACK_SIZE") {
         let stack_size = stack_size.parse().expect("Invalid stack size");
         let tokio_main = move || {
             let runtime = tokio::runtime::Builder::new_current_thread()

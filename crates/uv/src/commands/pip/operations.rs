@@ -1,12 +1,10 @@
 //! Common operations shared across the `pip` API and subcommands.
 
-use std::fmt::{self, Write};
-use std::path::PathBuf;
-use std::time::Instant;
-
 use anyhow::{anyhow, Context};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
+use std::fmt::Write;
+use std::path::PathBuf;
 use tracing::debug;
 
 use distribution_types::{
@@ -16,7 +14,6 @@ use distribution_types::{
     DistributionMetadata, IndexLocations, InstalledMetadata, LocalDist, Name, Resolution,
 };
 use install_wheel_rs::linker::LinkMode;
-use pep508_rs::MarkerEnvironment;
 use platform_tags::Tags;
 use pypi_types::Requirement;
 use uv_cache::Cache;
@@ -37,11 +34,12 @@ use uv_requirements::{
 };
 use uv_resolver::{
     DependencyMode, Exclusions, FlatIndex, InMemoryIndex, Manifest, Options, Preference,
-    Preferences, PythonRequirement, ResolutionGraph, Resolver,
+    Preferences, PythonRequirement, ResolutionGraph, Resolver, ResolverMarkers,
 };
 use uv_types::{HashStrategy, InFlight, InstalledPackagesProvider};
 use uv_warnings::warn_user;
 
+use crate::commands::pip::loggers::{InstallLogger, ResolveLogger};
 use crate::commands::reporters::{InstallReporter, PrepareReporter, ResolverReporter};
 use crate::commands::{compile_bytecode, elapsed, ChangeEvent, ChangeEventKind, DryRunEvent};
 use crate::printer::Printer;
@@ -73,6 +71,18 @@ pub(crate) async fn read_requirements(
     .await?)
 }
 
+/// Resolve a set of constraints.
+pub(crate) async fn read_constraints(
+    constraints: &[RequirementsSource],
+    client_builder: &BaseClientBuilder<'_>,
+) -> Result<Vec<Requirement>, Error> {
+    Ok(
+        RequirementsSpecification::from_sources(&[], constraints, &[], client_builder)
+            .await?
+            .constraints,
+    )
+}
+
 /// Resolve a set of requirements, similar to running `pip compile`.
 pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
     requirements: Vec<UnresolvedRequirementSpecification>,
@@ -88,7 +98,7 @@ pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
     reinstall: &Reinstall,
     upgrade: &Upgrade,
     tags: Option<&Tags>,
-    markers: Option<&MarkerEnvironment>,
+    markers: ResolverMarkers,
     python_requirement: PythonRequirement,
     client: &RegistryClient,
     flat_index: &FlatIndex,
@@ -96,11 +106,11 @@ pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
     build_dispatch: &BuildDispatch<'_>,
     concurrency: Concurrency,
     options: Options,
+    logger: Box<dyn ResolveLogger>,
     printer: Printer,
     preview: PreviewMode,
-    quiet: bool,
 ) -> Result<ResolutionGraph, Error> {
-    let start = Instant::now();
+    let start = std::time::Instant::now();
 
     // Resolve the requirements from the provided sources.
     let requirements = {
@@ -188,7 +198,7 @@ pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
             .chain(upgrade.constraints().cloned()),
     );
     let overrides = Overrides::from_requirements(overrides);
-    let preferences = Preferences::from_iter(preferences, markers);
+    let preferences = Preferences::from_iter(preferences, markers.marker_environment());
 
     // Determine any lookahead requirements.
     let lookaheads = match options.dependency_mode {
@@ -203,7 +213,7 @@ pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
                 DistributionDatabase::new(client, build_dispatch, concurrency.downloads, preview),
             )
             .with_reporter(ResolverReporter::from(printer))
-            .resolve(markers)
+            .resolve(&markers)
             .await?
         }
         DependencyMode::Direct => Vec::new(),
@@ -252,31 +262,9 @@ pub(crate) async fn resolve<InstalledPackages: InstalledPackagesProvider>(
         resolver.resolve().await?
     };
 
-    if !quiet {
-        resolution_success(&resolution, start, printer)?;
-    }
+    logger.on_complete(resolution.len(), start, printer)?;
 
     Ok(resolution)
-}
-
-// Prints a success message after completing resolution.
-pub(crate) fn resolution_success(
-    resolution: &ResolutionGraph,
-    start: Instant,
-    printer: Printer,
-) -> fmt::Result {
-    let s = if resolution.len() == 1 { "" } else { "s" };
-
-    writeln!(
-        printer.stderr(),
-        "{}",
-        format!(
-            "Resolved {} {}",
-            format!("{} package{}", resolution.len(), s).bold(),
-            format!("in {}", elapsed(start.elapsed())).dimmed()
-        )
-        .dimmed()
-    )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -312,6 +300,7 @@ pub(crate) async fn install(
     build_dispatch: &BuildDispatch<'_>,
     cache: &Cache,
     venv: &PythonEnvironment,
+    logger: Box<dyn InstallLogger>,
     dry_run: bool,
     printer: Printer,
     preview: PreviewMode,
@@ -355,17 +344,7 @@ pub(crate) async fn install(
 
     // Nothing to do.
     if remote.is_empty() && cached.is_empty() && reinstalls.is_empty() && extraneous.is_empty() {
-        let s = if resolution.len() == 1 { "" } else { "s" };
-        writeln!(
-            printer.stderr(),
-            "{}",
-            format!(
-                "Audited {} {}",
-                format!("{} package{}", resolution.len(), s).bold(),
-                format!("in {}", elapsed(start.elapsed())).dimmed()
-            )
-            .dimmed()
-        )?;
+        logger.on_audit(resolution.len(), start, printer)?;
         return Ok(());
     }
 
@@ -390,6 +369,7 @@ pub(crate) async fn install(
             cache,
             tags,
             hasher,
+            build_options,
             DistributionDatabase::new(client, build_dispatch, concurrency.downloads, preview),
         )
         .with_reporter(PrepareReporter::from(printer).with_length(remote.len() as u64));
@@ -399,17 +379,7 @@ pub(crate) async fn install(
             .await
             .context("Failed to prepare distributions")?;
 
-        let s = if wheels.len() == 1 { "" } else { "s" };
-        writeln!(
-            printer.stderr(),
-            "{}",
-            format!(
-                "Prepared {} {}",
-                format!("{} package{}", wheels.len(), s).bold(),
-                format!("in {}", elapsed(start.elapsed())).dimmed()
-            )
-            .dimmed()
-        )?;
+        logger.on_prepare(wheels.len(), start, printer)?;
 
         wheels
     };
@@ -442,21 +412,7 @@ pub(crate) async fn install(
             }
         }
 
-        let s = if extraneous.len() + reinstalls.len() == 1 {
-            ""
-        } else {
-            "s"
-        };
-        writeln!(
-            printer.stderr(),
-            "{}",
-            format!(
-                "Uninstalled {} {}",
-                format!("{} package{}", extraneous.len() + reinstalls.len(), s).bold(),
-                format!("in {}", elapsed(start.elapsed())).dimmed()
-            )
-            .dimmed()
-        )?;
+        logger.on_uninstall(extraneous.len() + reinstalls.len(), start, printer)?;
     }
 
     // Install the resolved distributions.
@@ -465,23 +421,14 @@ pub(crate) async fn install(
         let start = std::time::Instant::now();
         wheels = uv_installer::Installer::new(venv)
             .with_link_mode(link_mode)
+            .with_cache(cache)
             .with_reporter(InstallReporter::from(printer).with_length(wheels.len() as u64))
             // This technically can block the runtime, but we are on the main thread and
             // have no other running tasks at this point, so this lets us avoid spawning a blocking
             // task.
             .install_blocking(wheels)?;
 
-        let s = if wheels.len() == 1 { "" } else { "s" };
-        writeln!(
-            printer.stderr(),
-            "{}",
-            format!(
-                "Installed {} {}",
-                format!("{} package{}", wheels.len(), s).bold(),
-                format!("in {}", elapsed(start.elapsed())).dimmed()
-            )
-            .dimmed()
-        )?;
+        logger.on_install(wheels.len(), start, printer)?;
     }
 
     if compile {
@@ -489,7 +436,7 @@ pub(crate) async fn install(
     }
 
     // Notify the user of any environment modifications.
-    report_modifications(wheels, reinstalls, extraneous, printer)?;
+    logger.on_complete(wheels, reinstalls, extraneous, printer)?;
 
     Ok(())
 }

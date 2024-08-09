@@ -7,7 +7,7 @@ use zip::result::ZipError;
 use crate::metadata::MetadataError;
 use distribution_filename::WheelFilenameError;
 use pep440_rs::Version;
-use pypi_types::HashDigest;
+use pypi_types::{HashDigest, ParsedUrlError};
 use uv_client::WrappedReqwestError;
 use uv_fs::Simplified;
 use uv_normalize::PackageName;
@@ -16,14 +16,14 @@ use uv_normalize::PackageName;
 pub enum Error {
     #[error("Building source distributions is disabled")]
     NoBuild,
-    #[error("Using pre-built wheels is disabled")]
-    NoBinary,
 
     // Network error
     #[error("Failed to parse URL: {0}")]
     Url(String, #[source] url::ParseError),
     #[error("Expected an absolute path, but received: {}", _0.user_display())]
     RelativePath(PathBuf),
+    #[error(transparent)]
+    ParsedUrl(#[from] ParsedUrlError),
     #[error(transparent)]
     JoinRelativeUrl(#[from] pypi_types::JoinRelativeError),
     #[error("Expected a file URL, but received: {0}")]

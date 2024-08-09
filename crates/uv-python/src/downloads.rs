@@ -5,14 +5,16 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::task::{Context, Poll};
 
+use distribution_filename::{ExtensionError, SourceDistExtension};
 use futures::TryStreamExt;
+use owo_colors::OwoColorize;
+use pypi_types::{HashAlgorithm, HashDigest};
 use thiserror::Error;
 use tokio::io::{AsyncRead, ReadBuf};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::{debug, instrument};
 use url::Url;
-
-use pypi_types::{HashAlgorithm, HashDigest};
+use uv_cache::Cache;
 use uv_client::WrappedReqwestError;
 use uv_extract::hash::Hasher;
 use uv_fs::{rename_with_retry, Simplified};
@@ -27,17 +29,19 @@ use crate::{Interpreter, PythonRequest, PythonVersion, VersionRequest};
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    IO(#[from] io::Error),
+    Io(#[from] io::Error),
     #[error(transparent)]
     ImplementationError(#[from] ImplementationError),
-    #[error("Invalid python version: {0}")]
+    #[error("Expected download URL (`{0}`) to end in a supported file extension: {1}")]
+    MissingExtension(String, ExtensionError),
+    #[error("Invalid Python version: {0}")]
     InvalidPythonVersion(String),
-    #[error("Invalid request key, too many parts: {0}")]
+    #[error("Invalid request key (too many parts): {0}")]
     TooManyParts(String),
-    #[error("Download failed")]
+    #[error(transparent)]
     NetworkError(#[from] WrappedReqwestError),
-    #[error("Download failed")]
-    NetworkMiddlewareError(#[source] anyhow::Error),
+    #[error(transparent)]
+    NetworkMiddlewareError(#[from] anyhow::Error),
     #[error("Failed to extract archive: {0}")]
     ExtractError(String, #[source] uv_extract::Error),
     #[error("Failed to hash installation")]
@@ -48,7 +52,7 @@ pub enum Error {
         expected: String,
         actual: String,
     },
-    #[error("Invalid download url")]
+    #[error("Invalid download URL")]
     InvalidUrl(#[from] url::ParseError),
     #[error("Failed to create download directory")]
     DownloadDirError(#[source] io::Error),
@@ -64,15 +68,14 @@ pub enum Error {
         #[source]
         err: io::Error,
     },
-    #[error("Failed to parse managed Python directory name: {0}")]
-    NameError(String),
     #[error("Failed to parse request part")]
     InvalidRequestPlatform(#[from] platform::Error),
-    #[error("Cannot download managed Python for request: {0}")]
-    InvalidRequestKind(PythonRequest),
-    // TODO(zanieb): Implement display for `PythonDownloadRequest`
-    #[error("No download found for request: {0:?}")]
+    #[error("No download found for request: {}", _0.green())]
     NoDownloadFound(PythonDownloadRequest),
+    #[error(
+        "A mirror was provided via `{0}`, but the URL does not match the expected format: {0}"
+    )]
+    Mirror(&'static str, &'static str),
 }
 
 #[derive(Debug, PartialEq)]
@@ -142,26 +145,23 @@ impl PythonDownloadRequest {
     ///
     /// Returns [`None`] if the request kind is not compatible with a download, e.g., it is
     /// a request for a specific directory or executable name.
-    pub fn try_from_request(request: &PythonRequest) -> Option<Self> {
-        Self::from_request(request).ok()
-    }
-
-    /// Construct a new [`PythonDownloadRequest`] from a [`PythonRequest`].
-    pub fn from_request(request: &PythonRequest) -> Result<Self, Error> {
+    pub fn from_request(request: &PythonRequest) -> Option<Self> {
         match request {
-            PythonRequest::Version(version) => Ok(Self::default().with_version(version.clone())),
+            PythonRequest::Version(version) => Some(Self::default().with_version(version.clone())),
             PythonRequest::Implementation(implementation) => {
-                Ok(Self::default().with_implementation(*implementation))
+                Some(Self::default().with_implementation(*implementation))
             }
-            PythonRequest::ImplementationVersion(implementation, version) => Ok(Self::default()
-                .with_implementation(*implementation)
-                .with_version(version.clone())),
-            PythonRequest::Key(request) => Ok(request.clone()),
-            PythonRequest::Any => Ok(Self::default()),
+            PythonRequest::ImplementationVersion(implementation, version) => Some(
+                Self::default()
+                    .with_implementation(*implementation)
+                    .with_version(version.clone()),
+            ),
+            PythonRequest::Key(request) => Some(request.clone()),
+            PythonRequest::Any => Some(Self::default()),
             // We can't download a managed installation for these request kinds
             PythonRequest::Directory(_)
             | PythonRequest::ExecutableName(_)
-            | PythonRequest::File(_) => Err(Error::InvalidRequestKind(request.clone())),
+            | PythonRequest::File(_) => None,
         }
     }
 
@@ -408,14 +408,15 @@ impl ManagedPythonDownload {
     }
 
     /// Download and extract
-    #[instrument(skip(client, parent_path, reporter), fields(download = % self.key()))]
+    #[instrument(skip(client, parent_path, cache, reporter), fields(download = % self.key()))]
     pub async fn fetch(
         &self,
         client: &uv_client::BaseClient,
         parent_path: &Path,
+        cache: &Cache,
         reporter: Option<&dyn Reporter>,
     ) -> Result<DownloadResult, Error> {
-        let url = Url::parse(self.url)?;
+        let url = self.download_url()?;
         let path = parent_path.join(self.key().to_string());
 
         // If it already exists, return it
@@ -424,6 +425,8 @@ impl ManagedPythonDownload {
         }
 
         let filename = url.path_segments().unwrap().last().unwrap();
+        let ext = SourceDistExtension::from_path(filename)
+            .map_err(|err| Error::MissingExtension(url.to_string(), err))?;
         let response = client.get(url.clone()).send().await?;
 
         // Ensure the request was successful.
@@ -435,11 +438,11 @@ impl ManagedPythonDownload {
             .map(|reporter| (reporter, reporter.on_download_start(&self.key, size)));
 
         // Download and extract into a temporary directory.
-        let temp_dir = tempfile::tempdir_in(parent_path).map_err(Error::DownloadDirError)?;
+        let temp_dir = tempfile::tempdir_in(cache.root()).map_err(Error::DownloadDirError)?;
 
         debug!(
-            "Downloading {url} to temporary location {}",
-            temp_dir.path().display()
+            "Downloading {url} to temporary location: {}",
+            temp_dir.path().simplified().display()
         );
 
         let stream = response
@@ -459,12 +462,12 @@ impl ManagedPythonDownload {
         match progress {
             Some((&reporter, progress)) => {
                 let mut reader = ProgressReader::new(&mut hasher, progress, reporter);
-                uv_extract::stream::archive(&mut reader, filename, temp_dir.path())
+                uv_extract::stream::archive(&mut reader, ext, temp_dir.path())
                     .await
                     .map_err(|err| Error::ExtractError(filename.to_string(), err))?;
             }
             None => {
-                uv_extract::stream::archive(&mut hasher, filename, temp_dir.path())
+                uv_extract::stream::archive(&mut hasher, ext, temp_dir.path())
                     .await
                     .map_err(|err| Error::ExtractError(filename.to_string(), err))?;
             }
@@ -500,6 +503,21 @@ impl ManagedPythonDownload {
             extracted = extracted.join("install");
         }
 
+        // If the distribution is missing a `python`-to-`pythonX.Y` symlink, add it. PEP 394 permits
+        // it, and python-build-standalone releases after `20240726` include it, but releases prior
+        // to that date do not.
+        #[cfg(unix)]
+        {
+            match std::os::unix::fs::symlink(
+                format!("python{}.{}", self.key.major, self.key.minor),
+                extracted.join("bin").join("python"),
+            ) {
+                Ok(()) => {}
+                Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(err) => return Err(err.into()),
+            }
+        }
+
         // Persist it to the target
         debug!("Moving {} to {}", extracted.display(), path.user_display());
         rename_with_retry(extracted, &path)
@@ -514,6 +532,41 @@ impl ManagedPythonDownload {
 
     pub fn python_version(&self) -> PythonVersion {
         self.key.version()
+    }
+
+    /// Return the [`Url`] to use when downloading the distribution. If a mirror is set via the
+    /// appropriate environment variable, use it instead.
+    fn download_url(&self) -> Result<Url, Error> {
+        match self.key.implementation {
+            LenientImplementationName::Known(ImplementationName::CPython) => {
+                if let Ok(mirror) = std::env::var("UV_PYTHON_INSTALL_MIRROR") {
+                    let Some(suffix) = self.url.strip_prefix(
+                        "https://github.com/indygreg/python-build-standalone/releases/download/",
+                    ) else {
+                        return Err(Error::Mirror("UV_PYTHON_INSTALL_MIRROR", self.url));
+                    };
+                    return Ok(Url::parse(
+                        format!("{}/{}", mirror.trim_end_matches('/'), suffix).as_str(),
+                    )?);
+                }
+            }
+
+            LenientImplementationName::Known(ImplementationName::PyPy) => {
+                if let Ok(mirror) = std::env::var("UV_PYPY_INSTALL_MIRROR") {
+                    let Some(suffix) = self.url.strip_prefix("https://downloads.python.org/pypy/")
+                    else {
+                        return Err(Error::Mirror("UV_PYPY_INSTALL_MIRROR", self.url));
+                    };
+                    return Ok(Url::parse(
+                        format!("{}/{}", mirror.trim_end_matches('/'), suffix).as_str(),
+                    )?);
+                }
+            }
+
+            _ => {}
+        }
+
+        Ok(Url::parse(self.url)?)
     }
 }
 

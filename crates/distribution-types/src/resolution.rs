@@ -1,6 +1,6 @@
+use distribution_filename::DistExtension;
+use pypi_types::{HashDigest, Requirement, RequirementSource};
 use std::collections::BTreeMap;
-
-use pypi_types::{Requirement, RequirementSource};
 use uv_normalize::{ExtraName, GroupName, PackageName};
 
 use crate::{BuiltDist, Diagnostic, Dist, Name, ResolvedDist, SourceDist};
@@ -9,6 +9,7 @@ use crate::{BuiltDist, Diagnostic, Dist, Name, ResolvedDist, SourceDist};
 #[derive(Debug, Default, Clone)]
 pub struct Resolution {
     packages: BTreeMap<PackageName, ResolvedDist>,
+    hashes: BTreeMap<PackageName, Vec<HashDigest>>,
     diagnostics: Vec<ResolutionDiagnostic>,
 }
 
@@ -16,10 +17,12 @@ impl Resolution {
     /// Create a new resolution from the given pinned packages.
     pub fn new(
         packages: BTreeMap<PackageName, ResolvedDist>,
+        hashes: BTreeMap<PackageName, Vec<HashDigest>>,
         diagnostics: Vec<ResolutionDiagnostic>,
     ) -> Self {
         Self {
             packages,
+            hashes,
             diagnostics,
         }
     }
@@ -30,6 +33,11 @@ impl Resolution {
             ResolvedDist::Installable(dist) => Some(dist),
             ResolvedDist::Installed(_) => None,
         }
+    }
+
+    /// Return the hashes for the given package name, if they exist.
+    pub fn get_hashes(&self, package_name: &PackageName) -> &[HashDigest] {
+        self.hashes.get(package_name).map_or(&[], Vec::as_slice)
     }
 
     /// Iterate over the [`PackageName`] entities in this resolution.
@@ -63,7 +71,7 @@ impl Resolution {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum ResolutionDiagnostic {
     MissingExtra {
         /// The distribution that was requested with a non-existent extra. For example,
@@ -84,6 +92,11 @@ pub enum ResolutionDiagnostic {
         /// The reason that the version was yanked, if any.
         reason: Option<String>,
     },
+    MissingLowerBound {
+        /// The name of the package that had no lower bound from any other package in the
+        /// resolution. For example, `black`.
+        package_name: PackageName,
+    },
 }
 
 impl Diagnostic for ResolutionDiagnostic {
@@ -91,17 +104,24 @@ impl Diagnostic for ResolutionDiagnostic {
     fn message(&self) -> String {
         match self {
             Self::MissingExtra { dist, extra } => {
-                format!("The package `{dist}` does not have an extra named `{extra}`.")
+                format!("The package `{dist}` does not have an extra named `{extra}`")
             }
             Self::MissingDev { dist, dev } => {
-                format!("The package `{dist}` does not have a development dependency group named `{dev}`.")
+                format!("The package `{dist}` does not have a development dependency group named `{dev}`")
             }
             Self::YankedVersion { dist, reason } => {
                 if let Some(reason) = reason {
-                    format!("`{dist}` is yanked (reason: \"{reason}\").")
+                    format!("`{dist}` is yanked (reason: \"{reason}\")")
                 } else {
-                    format!("`{dist}` is yanked.")
+                    format!("`{dist}` is yanked")
                 }
+            }
+            Self::MissingLowerBound { package_name: name } => {
+                format!(
+                    "The transitive dependency `{name}` is unpinned. \
+                    Consider setting a lower bound with a constraint when using \
+                    `--resolution-strategy lowest` to avoid using outdated versions."
+                )
             }
         }
     }
@@ -112,6 +132,7 @@ impl Diagnostic for ResolutionDiagnostic {
             Self::MissingExtra { dist, .. } => name == dist.name(),
             Self::MissingDev { dist, .. } => name == dist.name(),
             Self::YankedVersion { dist, .. } => name == dist.name(),
+            Self::MissingLowerBound { package_name } => name == package_name,
         }
     }
 }
@@ -135,12 +156,14 @@ impl From<&ResolvedDist> for Requirement {
                         url: wheel.url.clone(),
                         location,
                         subdirectory: None,
+                        ext: DistExtension::Wheel,
                     }
                 }
                 Dist::Built(BuiltDist::Path(wheel)) => RequirementSource::Path {
                     install_path: wheel.path.clone(),
                     lock_path: wheel.path.clone(),
                     url: wheel.url.clone(),
+                    ext: DistExtension::Wheel,
                 },
                 Dist::Source(SourceDist::Registry(sdist)) => RequirementSource::Registry {
                     specifier: pep440_rs::VersionSpecifiers::from(
@@ -155,6 +178,7 @@ impl From<&ResolvedDist> for Requirement {
                         url: sdist.url.clone(),
                         location,
                         subdirectory: sdist.subdirectory.clone(),
+                        ext: DistExtension::Source(sdist.ext),
                     }
                 }
                 Dist::Source(SourceDist::Git(sdist)) => RequirementSource::Git {
@@ -168,6 +192,7 @@ impl From<&ResolvedDist> for Requirement {
                     install_path: sdist.install_path.clone(),
                     lock_path: sdist.lock_path.clone(),
                     url: sdist.url.clone(),
+                    ext: DistExtension::Source(sdist.ext),
                 },
                 Dist::Source(SourceDist::Directory(sdist)) => RequirementSource::Directory {
                     install_path: sdist.install_path.clone(),

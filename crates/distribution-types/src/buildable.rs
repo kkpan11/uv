@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::path::Path;
 
+use distribution_filename::SourceDistExtension;
 use pep440_rs::Version;
 use pep508_rs::VerbatimUrl;
 use url::Url;
@@ -109,6 +110,8 @@ impl std::fmt::Display for SourceUrl<'_> {
 #[derive(Debug, Clone)]
 pub struct DirectSourceUrl<'a> {
     pub url: &'a Url,
+    pub subdirectory: Option<&'a Path>,
+    pub ext: SourceDistExtension,
 }
 
 impl std::fmt::Display for DirectSourceUrl<'_> {
@@ -146,6 +149,7 @@ impl<'a> From<&'a GitSourceDist> for GitSourceUrl<'a> {
 pub struct PathSourceUrl<'a> {
     pub url: &'a Url,
     pub path: Cow<'a, Path>,
+    pub ext: SourceDistExtension,
 }
 
 impl std::fmt::Display for PathSourceUrl<'_> {
@@ -159,6 +163,7 @@ impl<'a> From<&'a PathSourceDist> for PathSourceUrl<'a> {
         Self {
             url: &dist.url,
             path: Cow::Borrowed(&dist.install_path),
+            ext: dist.ext,
         }
     }
 }
@@ -166,7 +171,8 @@ impl<'a> From<&'a PathSourceDist> for PathSourceUrl<'a> {
 #[derive(Debug, Clone)]
 pub struct DirectorySourceUrl<'a> {
     pub url: &'a Url,
-    pub path: Cow<'a, Path>,
+    pub install_path: Cow<'a, Path>,
+    pub lock_path: Cow<'a, Path>,
     pub editable: bool,
 }
 
@@ -180,7 +186,8 @@ impl<'a> From<&'a DirectorySourceDist> for DirectorySourceUrl<'a> {
     fn from(dist: &'a DirectorySourceDist) -> Self {
         Self {
             url: &dist.url,
-            path: Cow::Borrowed(&dist.install_path),
+            install_path: Cow::Borrowed(&dist.install_path),
+            lock_path: Cow::Borrowed(&dist.lock_path),
             editable: dist.editable,
         }
     }

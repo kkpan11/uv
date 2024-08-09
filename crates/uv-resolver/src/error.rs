@@ -2,29 +2,23 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Formatter;
 use std::sync::Arc;
 
-use pubgrub::range::Range;
-use pubgrub::report::{DefaultStringReporter, DerivationTree, External, Reporter};
+use pubgrub::{DefaultStringReporter, DerivationTree, Derived, External, Range, Reporter};
 use rustc_hash::FxHashMap;
 
 use distribution_types::{BuiltDist, IndexLocations, InstalledDist, SourceDist};
 use pep440_rs::Version;
-use pep508_rs::{MarkerTree, Requirement};
+use pep508_rs::MarkerTree;
 use uv_normalize::PackageName;
 
 use crate::candidate_selector::CandidateSelector;
 use crate::dependency_provider::UvDependencyProvider;
 use crate::fork_urls::ForkUrls;
-use crate::pubgrub::{
-    PubGrubPackage, PubGrubPackageInner, PubGrubReportFormatter, PubGrubSpecifierError,
-};
+use crate::pubgrub::{PubGrubPackage, PubGrubReportFormatter, PubGrubSpecifierError};
 use crate::python_requirement::PythonRequirement;
-use crate::resolver::{IncompletePackage, UnavailablePackage, UnavailableReason};
+use crate::resolver::{IncompletePackage, ResolverMarkers, UnavailablePackage, UnavailableReason};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
-    #[error("Failed to find a version of `{0}` that satisfies the requirement")]
-    NotFound(Requirement),
-
     #[error(transparent)]
     Client(#[from] uv_client::Error),
 
@@ -50,10 +44,10 @@ pub enum ResolveError {
     ConflictingOverrideUrls(PackageName, String, String),
 
     #[error("Requirements contain conflicting URLs for package `{0}`:\n- {}", _1.join("\n- "))]
-    ConflictingUrls(PackageName, Vec<String>),
+    ConflictingUrlsUniversal(PackageName, Vec<String>),
 
-    #[error("Requirements contain conflicting URLs for package `{package_name}` in split `{fork_markers}`:\n- {}", urls.join("\n- "))]
-    ConflictingUrlsInFork {
+    #[error("Requirements contain conflicting URLs for package `{package_name}` in split `{fork_markers:?}`:\n- {}", urls.join("\n- "))]
+    ConflictingUrlsFork {
         package_name: PackageName,
         urls: Vec<String>,
         fork_markers: MarkerTree,
@@ -67,6 +61,9 @@ pub enum ResolveError {
 
     #[error(transparent)]
     DistributionType(#[from] distribution_types::Error),
+
+    #[error(transparent)]
+    ParsedUrl(#[from] pypi_types::ParsedUrlError),
 
     #[error("Failed to download `{0}`")]
     Fetch(Box<BuiltDist>, #[source] uv_distribution::Error),
@@ -114,10 +111,12 @@ impl<T> From<tokio::sync::mpsc::error::SendError<T>> for ResolveError {
     }
 }
 
+pub(crate) type ErrorTree = DerivationTree<PubGrubPackage, Range<Version>, UnavailableReason>;
+
 /// A wrapper around [`pubgrub::error::NoSolutionError`] that displays a resolution failure report.
 #[derive(Debug)]
 pub struct NoSolutionError {
-    error: pubgrub::error::NoSolutionError<UvDependencyProvider>,
+    error: pubgrub::NoSolutionError<UvDependencyProvider>,
     available_versions: FxHashMap<PubGrubPackage, BTreeSet<Version>>,
     selector: CandidateSelector,
     python_requirement: PythonRequirement,
@@ -125,11 +124,23 @@ pub struct NoSolutionError {
     unavailable_packages: FxHashMap<PackageName, UnavailablePackage>,
     incomplete_packages: FxHashMap<PackageName, BTreeMap<Version, IncompletePackage>>,
     fork_urls: ForkUrls,
+    markers: ResolverMarkers,
 }
 
 impl NoSolutionError {
+    pub fn header(&self) -> String {
+        match &self.markers {
+            ResolverMarkers::Universal { .. } | ResolverMarkers::SpecificEnvironment(_) => {
+                "No solution found when resolving dependencies:".to_string()
+            }
+            ResolverMarkers::Fork(markers) => {
+                format!("No solution found when resolving dependencies for split ({markers:?}):")
+            }
+        }
+    }
+
     pub(crate) fn new(
-        error: pubgrub::error::NoSolutionError<UvDependencyProvider>,
+        error: pubgrub::NoSolutionError<UvDependencyProvider>,
         available_versions: FxHashMap<PubGrubPackage, BTreeSet<Version>>,
         selector: CandidateSelector,
         python_requirement: PythonRequirement,
@@ -137,6 +148,7 @@ impl NoSolutionError {
         unavailable_packages: FxHashMap<PackageName, UnavailablePackage>,
         incomplete_packages: FxHashMap<PackageName, BTreeMap<Version, IncompletePackage>>,
         fork_urls: ForkUrls,
+        markers: ResolverMarkers,
     ) -> Self {
         Self {
             error,
@@ -147,54 +159,52 @@ impl NoSolutionError {
             unavailable_packages,
             incomplete_packages,
             fork_urls,
+            markers,
         }
     }
 
     /// Given a [`DerivationTree`], collapse any [`External::FromDependencyOf`] incompatibilities
     /// wrap an [`PubGrubPackageInner::Extra`] package.
-    pub(crate) fn collapse_proxies(
-        derivation_tree: &mut DerivationTree<PubGrubPackage, Range<Version>, UnavailableReason>,
-    ) {
-        match derivation_tree {
-            DerivationTree::External(_) => {}
-            DerivationTree::Derived(derived) => {
-                match (
-                    Arc::make_mut(&mut derived.cause1),
-                    Arc::make_mut(&mut derived.cause2),
-                ) {
-                    (
-                        DerivationTree::External(External::FromDependencyOf(package, ..)),
-                        ref mut cause,
-                    ) if matches!(
-                        &**package,
-                        PubGrubPackageInner::Extra { .. }
-                            | PubGrubPackageInner::Marker { .. }
-                            | PubGrubPackageInner::Dev { .. }
-                    ) =>
-                    {
-                        Self::collapse_proxies(cause);
-                        *derivation_tree = cause.clone();
-                    }
-                    (
-                        ref mut cause,
-                        DerivationTree::External(External::FromDependencyOf(package, ..)),
-                    ) if matches!(
-                        &**package,
-                        PubGrubPackageInner::Extra { .. }
-                            | PubGrubPackageInner::Marker { .. }
-                            | PubGrubPackageInner::Dev { .. }
-                    ) =>
-                    {
-                        Self::collapse_proxies(cause);
-                        *derivation_tree = cause.clone();
-                    }
-                    _ => {
-                        Self::collapse_proxies(Arc::make_mut(&mut derived.cause1));
-                        Self::collapse_proxies(Arc::make_mut(&mut derived.cause2));
+    pub(crate) fn collapse_proxies(derivation_tree: ErrorTree) -> ErrorTree {
+        fn collapse(derivation_tree: ErrorTree) -> Option<ErrorTree> {
+            match derivation_tree {
+                DerivationTree::Derived(derived) => {
+                    match (&*derived.cause1, &*derived.cause2) {
+                        (
+                            DerivationTree::External(External::FromDependencyOf(package1, ..)),
+                            DerivationTree::External(External::FromDependencyOf(package2, ..)),
+                        ) if package1.is_proxy() && package2.is_proxy() => None,
+                        (
+                            DerivationTree::External(External::FromDependencyOf(package, ..)),
+                            cause,
+                        ) if package.is_proxy() => collapse(cause.clone()),
+                        (
+                            cause,
+                            DerivationTree::External(External::FromDependencyOf(package, ..)),
+                        ) if package.is_proxy() => collapse(cause.clone()),
+                        (cause1, cause2) => {
+                            let cause1 = collapse(cause1.clone());
+                            let cause2 = collapse(cause2.clone());
+                            match (cause1, cause2) {
+                                (Some(cause1), Some(cause2)) => {
+                                    Some(DerivationTree::Derived(Derived {
+                                        cause1: Arc::new(cause1),
+                                        cause2: Arc::new(cause2),
+                                        ..derived
+                                    }))
+                                }
+                                (Some(cause), None) | (None, Some(cause)) => Some(cause),
+                                _ => None,
+                            }
+                        }
                     }
                 }
+                DerivationTree::External(_) => Some(derivation_tree),
             }
         }
+
+        collapse(derivation_tree)
+            .expect("derivation tree should contain at least one external term")
     }
 }
 
@@ -218,6 +228,7 @@ impl std::fmt::Display for NoSolutionError {
             &self.unavailable_packages,
             &self.incomplete_packages,
             &self.fork_urls,
+            &self.markers,
         ) {
             write!(f, "\n\n{hint}")?;
         }

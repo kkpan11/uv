@@ -24,20 +24,22 @@ pub struct VirtualEnvironment {
 /// A parsed `pyvenv.cfg`
 #[derive(Debug, Clone)]
 pub struct PyVenvConfiguration {
-    /// If the `virtualenv` package was used to create the virtual environment.
+    /// If the virtualenv package was used to create the virtual environment.
     pub(crate) virtualenv: bool,
-    /// If the `uv` package was used to create the virtual environment.
+    /// If the uv package was used to create the virtual environment.
     pub(crate) uv: bool,
+    /// Is the virtual environment relocatable?
+    pub(crate) relocatable: bool,
 }
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error(transparent)]
+    Io(#[from] io::Error),
     #[error("Broken virtualenv `{0}`: `pyvenv.cfg` is missing")]
     MissingPyVenvCfg(PathBuf),
     #[error("Broken virtualenv `{0}`: `pyvenv.cfg` could not be parsed")]
     ParsePyVenvCfg(PathBuf, #[source] io::Error),
-    #[error(transparent)]
-    IO(#[from] io::Error),
 }
 
 /// Locate an active virtual environment by inspecting environment variables.
@@ -136,6 +138,7 @@ impl PyVenvConfiguration {
     pub fn parse(cfg: impl AsRef<Path>) -> Result<Self, Error> {
         let mut virtualenv = false;
         let mut uv = false;
+        let mut relocatable = false;
 
         // Per https://snarky.ca/how-virtual-environments-work/, the `pyvenv.cfg` file is not a
         // valid INI file, and is instead expected to be parsed by partitioning each line on the
@@ -143,7 +146,7 @@ impl PyVenvConfiguration {
         let content = fs::read_to_string(&cfg)
             .map_err(|err| Error::ParsePyVenvCfg(cfg.as_ref().to_path_buf(), err))?;
         for line in content.lines() {
-            let Some((key, _value)) = line.split_once('=') else {
+            let Some((key, value)) = line.split_once('=') else {
                 continue;
             };
             match key.trim() {
@@ -153,11 +156,18 @@ impl PyVenvConfiguration {
                 "uv" => {
                     uv = true;
                 }
+                "relocatable" => {
+                    relocatable = value.trim().to_lowercase() == "true";
+                }
                 _ => {}
             }
         }
 
-        Ok(Self { virtualenv, uv })
+        Ok(Self {
+            virtualenv,
+            uv,
+            relocatable,
+        })
     }
 
     /// Returns true if the virtual environment was created with the `virtualenv` package.
@@ -165,8 +175,13 @@ impl PyVenvConfiguration {
         self.virtualenv
     }
 
-    /// Returns true if the virtual environment was created with the `uv` package.
+    /// Returns true if the virtual environment was created with the uv package.
     pub fn is_uv(&self) -> bool {
         self.uv
+    }
+
+    /// Returns true if the virtual environment is relocatable.
+    pub fn is_relocatable(&self) -> bool {
+        self.relocatable
     }
 }

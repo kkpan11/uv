@@ -14,8 +14,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-aarch64-apple-darwin-install_only.tar.gz",
-        sha256: Some("1c0e0fe57200fc7787e3a11a56e641a08a853d31860aa2c21483ffbe1261c115")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-aarch64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("ef6948e836f531bd7a58ffbe602803ff1c83c65f99d1da19be369ea61f136c93")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -27,8 +27,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-aarch64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("c152d5c82272cc66f183dd00c5e9883148a25bb8a91a66d5b3e9c8a11289b2eb")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("6c9cf13644edc7250525ab1b2529ba1c0fff56c0c5a5c2242d84b6d4889d2bea")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -40,8 +40,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabi),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-        sha256: Some("4b6aca1560560c9381693d047aab42a1c2c23605b4c69b285f6c54d27a717509")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-armv7-unknown-linux-gnueabi-install_only_stripped.tar.gz",
+        sha256: Some("5a23ed8eaf948fe48d7c05dbfb58ea8638dcd2c4880d8519e069281ab427cbcb")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -53,8 +53,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabihf),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-        sha256: Some("9e12a309e99f06d28b49816d6e9ab6506fc43719b9a765d52913966f37e5111b")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-armv7-unknown-linux-gnueabihf-install_only_stripped.tar.gz",
+        sha256: Some("4281764e69339a138e30211b9923d74036d07c7a56c6aacc6dbdb2802a575f51")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -66,8 +66,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-i686-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("0b0c3f6b6c2ef50df0b459d11716f5859647713e43777966d9aee8e03c697b84")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-i686-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("ff0fab24f38c22130e45b90b7ec10dc4ce9677b545d9fb9109a72d2ffbab7b02")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -79,8 +79,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("f053b3953b99045e536eb15147e2cd0eaebf46fcf7aeba7db37e93ae9884bdcd")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-ppc64le-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("35a8359f1dc17a7a70007dae102a5e1562c0715a721377ede92137b2a0292406")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -92,8 +92,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-s390x-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("9eb6cb22758851aad1b85bc348e697140261df47df36aca77790cb14ceaa6bd0")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-s390x-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("b2fd015ab3689e024de6fbb34a4942acdb54c2184d1963e22829aafa1d81ba2c")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -105,8 +105,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-x86_64-apple-darwin-install_only.tar.gz",
-        sha256: Some("6713765cf6b16e55d8b36dc304a34c9dfcd9365d02ad78e2801c49d0e91266ef")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-x86_64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("9d68cbdd12d1d6f98d35cc76add232c12db75c6b7f49733bffc88e7b1c025a79")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -118,8 +118,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-x86_64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("eb5f83bfcd16391a5c010356e82708a0f1e6b7d4d8106f21e545a858f7d5f409")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("ca076aee4329f53f988346eb0521ad2a2cf7f723b6296088d03b98d8f22f5420")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -131,8 +131,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Musl),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-x86_64-unknown-linux-musl-install_only.tar.gz",
-        sha256: Some("93126e3298cd338756e3a40222b0d1fdb068769377930e2aeb9a6a81d8d4ca9d")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-x86_64-unknown-linux-musl-install_only_stripped.tar.gz",
+        sha256: Some("de4983ffa610ff2c3b9bcb62882366f017d94bf11b194c1fce17ad9e502acce6")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -144,8 +144,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-x86_64-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("fd3f9d23975e61406190444078355794944a9535323d84fa37d3fde1b73ea8f5")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.12.4%2B20240726-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("6dd7b4607f8a25f0f5f68e745f4c572b1a20c3bbfa86accfa45b52ab93b18ece")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -651,8 +651,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-aarch64-apple-darwin-install_only.tar.gz",
-        sha256: Some("a25a23802821699fae913dacd123033998ed745dfed692c8c7079590d2153d8d")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-aarch64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("4e60044786e069ef827792f9357734c222f7ec57731bf7a31f1882eca91cce52")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -664,8 +664,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-aarch64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("32f70725d45dc5affd8d3eb132671eaea02695e6d072dc5591f2d7418dee6fc1")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("1b631d5d76a0f4ab70f2bc9dcad06284a7ffcba53fe0b38fbd3135fbe00c2efc")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -677,8 +677,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabi),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-        sha256: Some("2c6abd081084407e4d8b0aea919bc41faf2bc160af51a61e14744a454acc8e3f")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-armv7-unknown-linux-gnueabi-install_only_stripped.tar.gz",
+        sha256: Some("0348a3d5bdadaa4084e5c8ca2182c7313a549b6322fe96e6c2edf0b15d3738cc")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -690,8 +690,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabihf),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-        sha256: Some("2b22bba1e2b04b2bae10bf4e01026b737445428b61f6ccefeaa5dacba9092dbf")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-armv7-unknown-linux-gnueabihf-install_only_stripped.tar.gz",
+        sha256: Some("6ae9cd96fd9a96c246d1a734f96c8ba7d0aaafc8218d215eec362d15ea68b9ed")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -703,8 +703,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-i686-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("8c56ac133e55ccb2cc690b586cc302a72fe8d6f98558955258806e9fa1785cd2")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-i686-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("1681ee419296a0eedd42ec4a40d4d93dfc8b4751931b9d64818d8541040e4806")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -716,8 +716,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("33a3e57cf572fac3844a4f70c228bb002279377eeeba2656388dad12806833ee")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-ppc64le-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("31922df558c5a6dcd98664cbad547176523f5b3e6b6c8b5604f6dceca279ca91")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -729,8 +729,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-s390x-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("74f1124514ff870e4d017d0d2bfde5eea9b0c7b3b2c8686cec227d41d059bffe")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-s390x-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("bdea7b52ab0f86c0c18d2bba2e908622b4f9f68d53ca9ccd0dfe8edcc9ca7e94")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -742,8 +742,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-x86_64-apple-darwin-install_only.tar.gz",
-        sha256: Some("9b56b0d2e301de0f5f94be9d5b7bd3f318c88d7897f9b183269ccada6356ac45")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-x86_64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("0d83ce532ae48559147be3ab2bf59242f9197c89fe215f6bba327429cdd6730a")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -755,8 +755,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-x86_64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("1f91c44febc850376a35ae77e1d45f7c823994b0c80293bbbc17e647eb893853")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("59427f06d187a51963ca025b3b37d58acfa55cb9d9e2dc6944e191158715cede")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -768,8 +768,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Musl),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-x86_64-unknown-linux-musl-install_only.tar.gz",
-        sha256: Some("ce92dcbfe6ddb0411e2270de47d1b5c82cb9104b3bdad3d063a04327e88fa7a8")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-x86_64-unknown-linux-musl-install_only_stripped.tar.gz",
+        sha256: Some("4d552c2b69003e6c02869fb4ab6013518176e0287b7040c57d62a812bd8c4ac9")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -781,8 +781,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.11.9%2B20240713-x86_64-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("12b640394be0d37301885d554adff94fce0fd595d8590a5ed3aca16ce38ca287")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.11.9%2B20240726-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("2e67e46b1e59d12583f3079c97dba46de3c8a158c9a83234a31613e969d0fd90")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1626,8 +1626,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-aarch64-apple-darwin-install_only.tar.gz",
-        sha256: Some("cb3e18229e4d2cb0d5c5903dd9d52dd47da8a22328e3cab5401cb8f7a184b73b")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-aarch64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("cdba5811d148375e0308cf034683ec418ef7bd2f9eaf83aeb5316fb1663390c0")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1639,8 +1639,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-aarch64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("f58ab2cadc7dc955c8ac2dbb7920207591e56ea22aab60b9a527d5473522f0bc")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("827af2ada1f4e2ec8289ddc7b495ba9e85d4a57f9a8b2ad7e019c4693b2945c3")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1652,8 +1652,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabi),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-        sha256: Some("6b27928cfa47b8edd0dbb99fcf42e70a3d48fb76a4f145f6977b3e208c280b75")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-armv7-unknown-linux-gnueabi-install_only_stripped.tar.gz",
+        sha256: Some("2f6a76f2faab51bb7857ba371a7b1570c5750f7f0011812a2e40f405303eb125")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1665,8 +1665,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabihf),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-        sha256: Some("812a301ce68127e0f83dcd02bfed94056ddfecefba6087eec53650a21931aa7b")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-armv7-unknown-linux-gnueabihf-install_only_stripped.tar.gz",
+        sha256: Some("b7ec3ed45ad6e898d537c243c8cccb1063e4f4db7e1633c07d7065ea67e80405")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1678,8 +1678,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-i686-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("49fab4ceb7b8037a31b6616f92e9a83695b8188f3c9a97e171f2bd0193ded5ce")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-i686-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("6d3c21ca172dfd3b3bd17922c311443baf5a06b108315ef889e130334af5b37c")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1691,8 +1691,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("f2f6fba348406ee51a26a97bbfed920e5fb1b729a5ab7305148c8f38f7bc338f")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-ppc64le-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("29161d230f348da158f8ad52b7a0c72104631e6c45e623c01de8c0ae6a761856")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1704,8 +1704,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-s390x-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("0f5b669c9301f560ad940ed93cd0f86111b091d7e20d4be434836f7edf1d9fa8")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-s390x-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("cd005aaeb56731abbe6a7c778084bdd72dc5eb95719b02bb4a2921e7fe79ab22")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1717,8 +1717,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-x86_64-apple-darwin-install_only.tar.gz",
-        sha256: Some("a8a7f6d6efb18ff3c068ef311abad48a778aadbb958aaacb2193bfb374cbebf5")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-x86_64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("0ef54e12063de80726c1a6ae021e65bd0915595c24f1ccd774cac1d3f14c6b89")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1730,8 +1730,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-x86_64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("6e90e30d1b2af67ddb65739df0e86f8b096f0d8e1e17feee8c70483760b0dc38")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("6ff16d445e3ca486b555e26e8cb9db52c3bba7fb5245dc100614d9e178c16418")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1743,8 +1743,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Musl),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-x86_64-unknown-linux-musl-install_only.tar.gz",
-        sha256: Some("e239889b1f609724fb967ed7bcd6832f20f6ae7796beab39e776a3f5d37369db")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-x86_64-unknown-linux-musl-install_only_stripped.tar.gz",
+        sha256: Some("5a8f641e2641a2685ecb8a5ab61945dd35b8ba60fe5c10cff3bd0c48d265b1fc")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -1756,8 +1756,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.10.14%2B20240713-x86_64-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("2b0fd29d8f8dddaedb96ac1b50febe2f0cef301aaf3ac7a0c76118e07cc22855")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.10.14%2B20240726-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("5696132b34fa6a2e416b2a6aeee8ad20395f0ae2f8230b0227bfcc565f1e3833")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3082,8 +3082,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-aarch64-apple-darwin-install_only.tar.gz",
-        sha256: Some("780a36bb0c0b0600561d225537d55b26a6a84fc4e7e593b3ec50126c5c79019f")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-aarch64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("9a555e124516da59da73357f22d427cd34254ca8c18ff9c458d8e44f58566337")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3095,8 +3095,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-aarch64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("f70b404a297a607405d6f2eb6ac4cb6160a7be0ae594983637da4e48b5c7cc26")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("874bef7efb4090e02070f6399ff47a890c7e1c35c5ed0b36fe457369da4673a8")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3108,8 +3108,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabi),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-armv7-unknown-linux-gnueabi-install_only.tar.gz",
-        sha256: Some("0801fe8b8aa841c2b735ec0515de83c2c530ac7547ef0b149b35d692e5684957")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-armv7-unknown-linux-gnueabi-install_only_stripped.tar.gz",
+        sha256: Some("f540e07ef6696c5b630cf456c7f16c2ae853080c00030c78b350e4aa95e1e5e6")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3121,8 +3121,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnueabihf),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-armv7-unknown-linux-gnueabihf-install_only.tar.gz",
-        sha256: Some("e3a4beeb4dedc4bae9c6a59ab0413075704d203cb99ab0df94d1dfca5f8ed270")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-armv7-unknown-linux-gnueabihf-install_only_stripped.tar.gz",
+        sha256: Some("3d2fdce5dba03b8c66bd36aff2b85ee4e7398476711a4db97245c027aa0bcde3")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3134,8 +3134,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-i686-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("a4e0e64dd1035e94ca57f05d4eeb7f3fc431af41c0d431698a52bf6c2efdc298")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-i686-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("b4a1c90296f83e541f79e4478960b321a25e00bdfc98b786b498620c43ab33ff")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3147,8 +3147,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-ppc64le-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("2d2a45ebefc8b37b41a9a5449c941735fa6c9e740f6f5ded0ecf6f760388ecdd")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-ppc64le-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("f3a669b72efd59ba76ca661f8677e16c0a73a09a9658841b99de1dd3336aeda3")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3160,8 +3160,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-s390x-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("8747e8bb9c768c7b169aed7b86a822027fb333403ab361dab32721c7b40ea115")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-s390x-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("7fde661924ce3439d439bd53d439125492b5ddfca2a94651b94307fead268b9a")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3173,8 +3173,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-x86_64-apple-darwin-install_only.tar.gz",
-        sha256: Some("2d812e5d1c6608430391ef603f37cc2b8e78bde54e49f29f575f6558e8cde2e7")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-x86_64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("1e8b3e67650e1b549fdcbc39b08af260ee9b5525a8a2252b8ee47c4258dae9e2")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3186,8 +3186,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-x86_64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("046db998b28373f69c55611e58a6611e5bb4e17997d0265beddad7c61e19f602")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("26d8b588feb2c69d49b83f751c2a26c301d73022fac7ae74b3a1d0473ebc3674")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3199,8 +3199,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Musl),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-x86_64-unknown-linux-musl-install_only.tar.gz",
-        sha256: Some("4856f201876cbee32943e97a7be8d85c51257b855d20d4c08698bbd8e2811b6b")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-x86_64-unknown-linux-musl-install_only_stripped.tar.gz",
+        sha256: Some("2ca6a92e04fd925b4d1d8beb8c57a6104f14dc7f8c23b61022608ba945940b47")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -3212,8 +3212,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.9.19%2B20240713-x86_64-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("3279b5ad474f3ae7017411b8204ff441d18ca14d4ae5585ff3c4d7f8b035aca4")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.9.19%2B20240726-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("db39a9da42deccdbada78ab3c39fa4d0b1e8957c3cc73447bf400386e0bfb3cc")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4915,8 +4915,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-aarch64-apple-darwin-install_only.tar.gz",
-        sha256: Some("0be10f265da68c9be2bb4d66228eabc72a8e60bd62e3950012771a1227a33775")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-aarch64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("7aebd1cb21e1531f74310032b1b4eaea987ecd8c5eaf8deb25aaf1d1ffeab2a0")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4928,8 +4928,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-aarch64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("915fda01a8530c7f68eec70f00b60b61ea23e9210db44435bc5702d2b2ce3a5b")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("63d7e556cffc4ad86683546251bdb9aaf3b0cfa3ac3c47fe7a0ac842cc26f554")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4941,8 +4941,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-i686-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("d7a908fe815db0cb643974c25edf85082f0fa9bd995c477fbd427f8e40b83ff3")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-i686-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("b5542442a31b088c50ffda4fffef6acba8a79d153b1dbef7d99afcc7cc101120")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4954,8 +4954,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Darwin),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-x86_64-apple-darwin-install_only.tar.gz",
-        sha256: Some("6750756db0b1d3e9f874465d98467b66fc720e693437baf8a7e29fdef1e0674d")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-x86_64-apple-darwin-install_only_stripped.tar.gz",
+        sha256: Some("ea54ed5f2439507c90127283e5b47ec12a2ed601aeea6f6c328681609df11519")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4967,8 +4967,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Gnu),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-x86_64-unknown-linux-gnu-install_only.tar.gz",
-        sha256: Some("974075f112347cd3c2ef680de0d54dd865b63471c4e0f5dbf7951c8f7c4317c2")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        sha256: Some("a1ac3502e1aeb67362bed216c2dcdc18ab73ccd1384f1af2958a4e567bdc8a89")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4980,8 +4980,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Linux),
             libc: Libc::Some(target_lexicon::Environment::Musl),
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-x86_64-unknown-linux-musl-install_only.tar.gz",
-        sha256: Some("657a9dedbadf5d7997843efc47a98dba7f3438fb884838bf1397e73ea1f1cfba")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-x86_64-unknown-linux-musl-install_only_stripped.tar.gz",
+        sha256: Some("87ab6a7e745c655fd6090717a45c097ceb616900845ed69b4160cb845822cc1e")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -4993,8 +4993,8 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
             os: Os(target_lexicon::OperatingSystem::Windows),
             libc: Libc::None,
         },
-        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240713/cpython-3.8.19%2B20240713-x86_64-pc-windows-msvc-install_only.tar.gz",
-        sha256: Some("175e6fddc729a50f09f58fb9d6f4d9ab94b39b735f1c03684c5e1a216a300e17")
+        url: "https://github.com/indygreg/python-build-standalone/releases/download/20240726/cpython-3.8.19%2B20240726-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+        sha256: Some("392875f56d43f7b45ced8b2bbb59f69622644c4c77681baeeeee564a55d71392")
     },
     ManagedPythonDownload {
         key: PythonInstallationKey {
@@ -6724,5 +6724,1539 @@ pub(crate) const PYTHON_DOWNLOADS: &[ManagedPythonDownload] = &[
         },
         url: "https://github.com/indygreg/python-build-standalone/releases/download/20181218/cpython-3.7.1-linux64-20181218T1905.tar.zst",
         sha256: None
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-macos_arm64.tar.bz2",
+        sha256: Some("6c003376667a95c7a228544649677b9927b8210d6444b901817aad24b8719b93")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-aarch64.tar.bz2",
+        sha256: Some("fc720999bc5050e1d3706b3b6445e695cf42bfc71ebc7c88ed6bb88828b1d385")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-linux32.tar.bz2",
+        sha256: Some("0df48aa780159e879ac89a805d143e4a6cd1b842f98046f5a3f865814bfaa2a4")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-s390x.tar.bz2",
+        sha256: Some("af97efe498a209ba18c7bc7d084164a9907fb3736588b6864955177e19d5216a")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-macos_x86_64.tar.bz2",
+        sha256: Some("490f2c6ba2489f405444f3b4ad42166da6e2eb73489a9535b206067eaaf21737")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-linux64.tar.bz2",
+        sha256: Some("404e6180d6caf9258eaab0c02c72018e9aa8eb03ab9094a0ff17ee5e3b265ac1")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 14,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.16-win64.zip",
+        sha256: Some("e08415a2f35c6ecf2342b504bdfde11e4c5eca3fc5ef7fd2214ff064a5a54396")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-macos_arm64.tar.bz2",
+        sha256: Some("d927c5105ea7880f7596fe459183e35cc17c853ef5105678b2ad62a8d000a548")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-aarch64.tar.bz2",
+        sha256: Some("52146fccaf64e87e71d178dda8de63c01577ec3923073dc69e1519622bcacb74")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-linux32.tar.bz2",
+        sha256: Some("75dd58c9abd8b9d78220373148355bc3119febcf27a2c781d64ad85e7232c4aa")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-s390x.tar.bz2",
+        sha256: Some("209e57596381e13c9914d1332f359dc4b78de06576739747eb797bdbf85062b8")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-macos_x86_64.tar.bz2",
+        sha256: Some("559b61ba7e7c5a5c23cef5370f1fab47ccdb939ac5d2b42b4bef091abe3f6964")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-linux64.tar.bz2",
+        sha256: Some("33c584e9a70a71afd0cb7dd8ba9996720b911b3b8ed0156aea298d4487ad22c3")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.15-win64.zip",
+        sha256: Some("b378b3ab1c3719aee0c3e5519e7bff93ff67b2d8aa987fe4f088b54382db676c")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-macos_arm64.tar.bz2",
+        sha256: Some("45671b1e9437f95ccd790af10dbeb57733cca1ed9661463b727d3c4f5caa7ba0")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-aarch64.tar.bz2",
+        sha256: Some("26208b5a134d9860a08f74cce60960005758e82dc5f0e3566a48ed863a1f16a1")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-linux32.tar.bz2",
+        sha256: Some("811667825ae58ada4b7c3d8bc1b5055b9f9d6a377e51aedfbe0727966603f60e")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-s390x.tar.bz2",
+        sha256: Some("043c13a585479428b463ab69575a088db74aadc16798d6e677d97f563585fee3")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-macos_x86_64.tar.bz2",
+        sha256: Some("dbc15d8570560d5f79366883c24bc42231a92855ac19a0f28cb0adeb11242666")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-linux64.tar.bz2",
+        sha256: Some("6c577993160b6f5ee8cab73cd1a807affcefafe2f7441c87bd926c10505e8731")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 10,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.10-v7.3.12-win64.zip",
+        sha256: Some("8c3b1d34fb99100e230e94560410a38d450dc844effbee9ea183518e4aff595c")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-macos_arm64.tar.bz2",
+        sha256: Some("88f824e7a2d676440d09bc90fc959ae0fd3557d7e2f14bfbbe53d41d159a47fe")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-aarch64.tar.bz2",
+        sha256: Some("de3f2ed3581b30555ac0dd3e4df78a262ec736a36fb2e8f28259f8539b278ef4")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-linux32.tar.bz2",
+        sha256: Some("583b6d6dd4e8c07cbc04da04a7ec2bdfa6674825289c2378c5e018d5abe779ea")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-s390x.tar.bz2",
+        sha256: Some("7a56ebb27dba3110dc1ff52d8e0449cdb37fe5c2275f7faf11432e4e164833ba")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-macos_x86_64.tar.bz2",
+        sha256: Some("fda015431621e7e5aa16359d114f2c45a77ed936992c1efff86302e768a6b21c")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-linux64.tar.bz2",
+        sha256: Some("16f9c5b808c848516e742986e826b833cdbeda09ad8764e8704595adbe791b23")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 19,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.16-win64.zip",
+        sha256: Some("06ec12a5e964dc0ad33e6f380185a4d295178dce6d6df512f508e7aee00a1323")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-macos_arm64.tar.bz2",
+        sha256: Some("300541c32125767a91b182b03d9cc4257f04971af32d747ecd4d62549d72acfd")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-aarch64.tar.bz2",
+        sha256: Some("03e35fcba290454bb0ccf7ee57fb42d1e63108d10d593776a382c0a2fe355de0")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-linux32.tar.bz2",
+        sha256: Some("c6209380977066c9e8b96e8258821c70f996004ce1bc8659ae83d4fd5a89ff5c")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-s390x.tar.bz2",
+        sha256: Some("deeb5e54c36a0fd9cfefd16e63a0d5bed4f4a43e6bbc01c23f0ed8f7f1c0aaf3")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-macos_x86_64.tar.bz2",
+        sha256: Some("18ad7c9cb91c5e8ef9d40442b2fd1f6392ae113794c5b6b7d3a45e04f19edec6")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-linux64.tar.bz2",
+        sha256: Some("f062be307200bde434817e1620cebc13f563d6ab25309442c5f4d0f0d68f0912")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 18,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.15-win64.zip",
+        sha256: Some("a156dad8b58570597eaaabe05663f00f80c60bc11df4a9c46d0953b6c5eb9209")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-macos_arm64.tar.bz2",
+        sha256: Some("0e8a1a3468b9790c734ac698f5b00cc03fc16899ccc6ce876465fac0b83980e3")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-aarch64.tar.bz2",
+        sha256: Some("e9327fb9edaf2ad91935d5b8563ec5ff24193bddb175c1acaaf772c025af1824")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-linux32.tar.bz2",
+        sha256: Some("aa04370d38f451683ccc817d76c2b3e0f471dbb879e0bd618d9affbdc9cd37a4")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-s390x.tar.bz2",
+        sha256: Some("20d84658a6899bdd2ca35b00ead33a2f56cff2c40dce1af630466d27952f6d4f")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-macos_x86_64.tar.bz2",
+        sha256: Some("64f008ffa070c407e5ef46c8256b2e014de7196ea5d858385861254e7959f4eb")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-linux64.tar.bz2",
+        sha256: Some("84c89b966fab2b58f451a482ee30ca7fec3350435bd0b9614615c61dc6da2390")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 17,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.12-win64.zip",
+        sha256: Some("0996054207b401aeacace1aa11bad82cfcb463838a1603c5f263626c47bbe0e6")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-macos_arm64.tar.bz2",
+        sha256: Some("91ad7500f1a39531dbefa0b345a3dcff927ff9971654e8d2e9ef7c5ae311f57e")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-aarch64.tar.bz2",
+        sha256: Some("09175dc652ed895d98e9ad63d216812bf3ee7e398d900a9bf9eb2906ba8302b9")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-linux32.tar.bz2",
+        sha256: Some("0099d72c2897b229057bff7e2c343624aeabdc60d6fb43ca882bff082f1ffa48")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-s390x.tar.bz2",
+        sha256: Some("e1f30f2ddbe3f446ddacd79677b958d56c07463b20171fb2abf8f9a3178b79fc")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-macos_x86_64.tar.bz2",
+        sha256: Some("d33f40b207099872585afd71873575ca6ea638a27d823bc621238c5ae82542ed")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-linux64.tar.bz2",
+        sha256: Some("d506172ca11071274175d74e9c581c3166432d0179b036470e3b9e8d20eae581")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.11-win64.zip",
+        sha256: Some("57faad132d42d3e7a6406fcffafffe0b4f390cf0e2966abb8090d073c6edf405")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-macos_arm64.tar.bz2",
+        sha256: Some("e2a6bec7408e6497c7de8165aa4a1b15e2416aec4a72f2578f793fb06859ccba")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-aarch64.tar.bz2",
+        sha256: Some("657a04fd9a5a992a2f116a9e7e9132ea0c578721f59139c9fb2083775f71e514")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-linux32.tar.bz2",
+        sha256: Some("b6db59613b9a1c0c1ab87bc103f52ee95193423882dc8a848b68850b8ba59cc5")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-s390x.tar.bz2",
+        sha256: Some("ca6525a540cf0c682d1592ae35d3fbc97559a97260e4b789255cc76dde7a14f0")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-macos_x86_64.tar.bz2",
+        sha256: Some("f90c8619b41e68ec9ffd7d5e913fe02e60843da43d3735b1c1bc75bcfe638d97")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-linux64.tar.bz2",
+        sha256: Some("95cf99406179460d63ddbfe1ec870f889d05f7767ce81cef14b88a3a9e127266")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.10-win64.zip",
+        sha256: Some("07e18b7b24c74af9730dfaab16e24b22ef94ea9a4b64cbb2c0d80610a381192a")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-aarch64.tar.bz2",
+        sha256: Some("2e1ae193d98bc51439642a7618d521ea019f45b8fb226940f7e334c548d2b4b9")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-linux32.tar.bz2",
+        sha256: Some("0de4b9501cf28524cdedcff5052deee9ea4630176a512bdc408edfa30914bae7")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-s390x.tar.bz2",
+        sha256: Some("774dca83bcb4403fb99b3d155e7bd572ef8c52b9fe87a657109f64e75ad71732")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-osx64.tar.bz2",
+        sha256: Some("59c8852168b2b1ba1f0211ff043c678760380d2f9faf2f95042a8878554dbc25")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-linux64.tar.bz2",
+        sha256: Some("46818cb3d74b96b34787548343d266e2562b531ddbaf330383ba930ff1930ed5")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.9-win64.zip",
+        sha256: Some("be48ab42f95c402543a7042c999c9433b17e55477c847612c8733a583ca6dff5")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-aarch64-portable.tar.bz2",
+        sha256: Some("b7282bc4484bceae5bc4cc04e05ee4faf51cb624c8fc7a69d92e5fdf0d0c96aa")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-linux32.tar.bz2",
+        sha256: Some("a0d18e4e73cc655eb02354759178b8fb161d3e53b64297d05e2fff91f7cf862d")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-s390x.tar.bz2",
+        sha256: Some("37b596bfe76707ead38ffb565629697e9b6fa24e722acc3c632b41ec624f5d95")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-osx64.tar.bz2",
+        sha256: Some("95bd88ac8d6372cd5b7b5393de7b7d5c615a0c6e42fdb1eb67f2d2d510965aee")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-linux64.tar.bz2",
+        sha256: Some("129a055032bba700cd1d0acacab3659cf6b7180e25b1b2f730e792f06d5b3010")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 9,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.9-v7.3.8-win64.zip",
+        sha256: Some("c1b2e4cde2dcd1208d41ef7b7df8e5c90564a521e7a5db431673da335a1ba697")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-macos_arm64.tar.bz2",
+        sha256: Some("78cdc79ff964c4bfd13eb45a7d43a011cbe8d8b513323d204891f703fdc4fa1a")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-aarch64.tar.bz2",
+        sha256: Some("9a2fa0b8d92b7830aa31774a9a76129b0ff81afbd22cd5c41fbdd9119e859f55")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-linux32.tar.bz2",
+        sha256: Some("a79b31fce8f5bc1f9940b6777134189a1d3d18bda4b1c830384cda90077c9176")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-s390x.tar.bz2",
+        sha256: Some("eab7734d86d96549866f1cba67f4f9c73c989f6a802248beebc504080d4c3fcd")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-macos_x86_64.tar.bz2",
+        sha256: Some("194ca0b4d91ae409a9cb1a59eb7572d7affa8a451ea3daf26539aa515443433a")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-linux64.tar.bz2",
+        sha256: Some("470330e58ac105c094041aa07bb05676b06292bc61409e26f5c5593ebb2292d9")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 16,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.11-win64.zip",
+        sha256: Some("0f46fb6df32941ea016f77cfd7e9b426d5ac25a2af2453414df66103941c8435")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-macos_arm64.tar.bz2",
+        sha256: Some("6cb1429371e4854b718148a509d80143f801e3abfc72fef58d88aeeee1e98f9e")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-aarch64.tar.bz2",
+        sha256: Some("e4caa1a545f22cfee87d5b9aa6f8852347f223643ad7d2562e0b2a2f4663ad98")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-linux32.tar.bz2",
+        sha256: Some("b70ed7fdc73a74ebdc04f07439f7bad1a849aaca95e26b4a74049d0e483f071c")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-s390x.tar.bz2",
+        sha256: Some("c294f8e815158388628fe77ac5b8ad6cd93c8db1359091fa02d41cf6da4d61a1")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-macos_x86_64.tar.bz2",
+        sha256: Some("399eb1ce4c65f62f6a096b7c273536601b7695e3c0dc0457393a659b95b7615b")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-linux64.tar.bz2",
+        sha256: Some("ceef6496fd4ab1c99e3ec22ce657b8f10f8bb77a32427fadfb5e1dd943806011")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 15,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.10-win64.zip",
+        sha256: Some("362dd624d95bd64743190ea2539b97452ecb3d53ea92ceb2fbe9f48dc60e6b8f")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-aarch64.tar.bz2",
+        sha256: Some("5e124455e207425e80731dff317f0432fa0aba1f025845ffca813770e2447e32")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-linux32.tar.bz2",
+        sha256: Some("4b261516c6c59078ab0c8bd7207327a1b97057b4ec1714ed5e79a026f9efd492")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-s390x.tar.bz2",
+        sha256: Some("c6177a0016c9145c7b99fddb5d74cc2e518ccdb216a6deb51ef6a377510cc930")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-osx64.tar.bz2",
+        sha256: Some("91a5c2c1facd5a4931a8682b7d792f7cf4f2ba25cd2e7e44e982139a6d5e4840")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-linux64.tar.bz2",
+        sha256: Some("08be25ec82fc5d23b78563eda144923517daba481a90af0ace7a047c9c9a3c34")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.9-win64.zip",
+        sha256: Some("05022baaa55db2b60880f2422312d9e4025e1267303ac57f33e8253559d0be88")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-aarch64-portable.tar.bz2",
+        sha256: Some("0210536e9f1841ba283c13b04783394050837bb3e6f4091c9f1bd9c7f2b94b55")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-linux32.tar.bz2",
+        sha256: Some("bea4b275decd492af6462157d293dd6fcf08a949859f8aec0959537b40afd032")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-s390x.tar.bz2",
+        sha256: Some("ad53d373d6e275a41ca64da7d88afb6a17e48e7bfb2a6fff92daafdc06da6b90")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-osx64.tar.bz2",
+        sha256: Some("de1b283ff112d76395c0162a1cf11528e192bdc230ee3f1b237f7694c7518dee")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-linux64.tar.bz2",
+        sha256: Some("089f8e3e357d6130815964ddd3507c13bd53e4976ccf0a89b5c36a9a6775a188")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 8,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.8-v7.3.8-win64.zip",
+        sha256: Some("0894c468e7de758c509a602a28ef0ba4fbf197ccdf946c7853a7283d9bb2a345")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-aarch64.tar.bz2",
+        sha256: Some("dfc62f2c453fb851d10a1879c6e75c31ffebbf2a44d181bb06fcac4750d023fc")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-linux32.tar.bz2",
+        sha256: Some("3398cece0167b81baa219c9cd54a549443d8c0a6b553ec8ec13236281e0d86cd")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-s390x.tar.bz2",
+        sha256: Some("fcab3b9e110379948217cf592229542f53c33bfe881006f95ce30ac815a6df48")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-osx64.tar.bz2",
+        sha256: Some("12d92f578a200d50959e55074b20f29f93c538943e9a6e6522df1a1cc9cef542")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-linux64.tar.bz2",
+        sha256: Some("c58195124d807ecc527499ee19bc511ed753f4f2e418203ca51bc7e3b124d5d1")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 13,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.9-win64.zip",
+        sha256: Some("8acb184b48fb3c854de0662e4d23a66b90e73b1ab73a86695022c12c745d8b00")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-aarch64-portable.tar.bz2",
+        sha256: Some("639c76f128a856747aee23a34276fa101a7a157ea81e76394fbaf80b97dcf2f2")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-linux32.tar.bz2",
+        sha256: Some("38429ec6ea1aca391821ee4fbda7358ae86de4600146643f2af2fe2c085af839")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-s390x.tar.bz2",
+        sha256: Some("5c2cd3f7cf04cb96f6bcc6b02e271f5d7275867763978e66651b8d1605ef3141")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-osx64.tar.bz2",
+        sha256: Some("76b8eef5b059a7e478f525615482d2a6e9feb83375e3f63c16381d80521a693f")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-linux64.tar.bz2",
+        sha256: Some("409085db79a6d90bfcf4f576dca1538498e65937acfbe03bd4909bdc262ff378")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 12,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.8-win64.zip",
+        sha256: Some("96df67492bc8d62b2e71dddf5f6c58965a26cac9799c5f4081401af0494b3bcc")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-aarch64.tar.bz2",
+        sha256: Some("85d83093b3ef5b863f641bc4073d057cc98bb821e16aa9361a5ff4898e70e8ee")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-linux32.tar.bz2",
+        sha256: Some("3dd8b565203d372829e53945c599296fa961895130342ea13791b17c84ed06c4")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-s390x.tar.bz2",
+        sha256: Some("dffdf5d73613be2c6809dc1a3cf3ee6ac2f3af015180910247ff24270b532ed5")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-osx64.tar.bz2",
+        sha256: Some("b3a7d3099ad83de7c267bb79ae609d5ce73b01800578ffd91ba7e221b13f80db")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-linux64.tar.bz2",
+        sha256: Some("9000db3e87b54638e55177e68cbeb30a30fe5d17b6be48a9eb43d65b3ebcfc26")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 10,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.5-win64.zip",
+        sha256: Some("072bd22427178dc4e65d961f50281bd2f56e11c4e4d9f16311c703f69f46ae24")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::Aarch64(target_lexicon::Aarch64Architecture::Aarch64)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-aarch64.tar.bz2",
+        sha256: Some("ee4aa041558b58de6063dd6df93b3def221c4ca4c900d6a9db5b1b52135703a8")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-linux32.tar.bz2",
+        sha256: Some("7d81b8e9fcd07c067cfe2f519ab770ec62928ee8787f952cadf2d2786246efc8")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_32(target_lexicon::X86_32Architecture::I686)),
+            os: Os(target_lexicon::OperatingSystem::Windows),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-win32.zip",
+        sha256: Some("a282ce40aa4f853e877a5dbb38f0a586a29e563ae9ba82fd50c7e5dc465fb649")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::S390x),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-s390x.tar.bz2",
+        sha256: Some("92000d90b9a37f2e9cb7885f2a872adfa9e48e74bf7f84a8b8185c8181f0502d")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Darwin),
+            libc: Libc::None,
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-osx64.tar.bz2",
+        sha256: Some("d72b27d5bb60813273f14f07378a08822186a66e216c5d1a768ad295b582438d")
+    },
+    ManagedPythonDownload {
+        key: PythonInstallationKey {
+            major: 3,
+            minor: 7,
+            patch: 9,
+            implementation: LenientImplementationName::Known(ImplementationName::PyPy),
+            arch: Arch(target_lexicon::Architecture::X86_64),
+            os: Os(target_lexicon::OperatingSystem::Linux),
+            libc: Libc::Some(target_lexicon::Environment::Gnu),
+        },
+        url: "https://downloads.python.org/pypy/pypy3.7-v7.3.3-linux64.tar.bz2",
+        sha256: Some("37e2804c4661c86c857d709d28c7de716b000d31e89766599fdf5a98928b7096")
     },
 ];

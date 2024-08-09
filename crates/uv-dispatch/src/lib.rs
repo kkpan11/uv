@@ -17,7 +17,8 @@ use uv_build::{SourceBuild, SourceBuildContext};
 use uv_cache::Cache;
 use uv_client::RegistryClient;
 use uv_configuration::{
-    BuildKind, BuildOptions, ConfigSettings, IndexStrategy, Reinstall, SetupPyStrategy,
+    BuildKind, BuildOptions, ConfigSettings, Constraints, IndexStrategy, Reinstall,
+    SetupPyStrategy, SourceStrategy,
 };
 use uv_configuration::{Concurrency, PreviewMode};
 use uv_distribution::DistributionDatabase;
@@ -26,6 +27,7 @@ use uv_installer::{Installer, Plan, Planner, Preparer, SitePackages};
 use uv_python::{Interpreter, PythonEnvironment};
 use uv_resolver::{
     ExcludeNewer, FlatIndex, InMemoryIndex, Manifest, OptionsBuilder, PythonRequirement, Resolver,
+    ResolverMarkers,
 };
 use uv_types::{BuildContext, BuildIsolation, EmptyInstalledPackages, HashStrategy, InFlight};
 
@@ -34,6 +36,7 @@ use uv_types::{BuildContext, BuildIsolation, EmptyInstalledPackages, HashStrateg
 pub struct BuildDispatch<'a> {
     client: &'a RegistryClient,
     cache: &'a Cache,
+    constraints: Constraints,
     interpreter: &'a Interpreter,
     index_locations: &'a IndexLocations,
     index_strategy: IndexStrategy,
@@ -49,6 +52,7 @@ pub struct BuildDispatch<'a> {
     exclude_newer: Option<ExcludeNewer>,
     source_build_context: SourceBuildContext,
     build_extra_env_vars: FxHashMap<OsString, OsString>,
+    sources: SourceStrategy,
     concurrency: Concurrency,
     preview_mode: PreviewMode,
 }
@@ -57,6 +61,7 @@ impl<'a> BuildDispatch<'a> {
     pub fn new(
         client: &'a RegistryClient,
         cache: &'a Cache,
+        constraints: &'a [Requirement],
         interpreter: &'a Interpreter,
         index_locations: &'a IndexLocations,
         flat_index: &'a FlatIndex,
@@ -70,12 +75,14 @@ impl<'a> BuildDispatch<'a> {
         link_mode: install_wheel_rs::linker::LinkMode,
         build_options: &'a BuildOptions,
         exclude_newer: Option<ExcludeNewer>,
+        sources: SourceStrategy,
         concurrency: Concurrency,
         preview_mode: PreviewMode,
     ) -> Self {
         Self {
             client,
             cache,
+            constraints: Constraints::from_requirements(constraints.iter().cloned()),
             interpreter,
             index_locations,
             flat_index,
@@ -89,9 +96,10 @@ impl<'a> BuildDispatch<'a> {
             link_mode,
             build_options,
             exclude_newer,
-            concurrency,
             source_build_context: SourceBuildContext::default(),
             build_extra_env_vars: FxHashMap::default(),
+            sources,
+            concurrency,
             preview_mode,
         }
     }
@@ -123,12 +131,12 @@ impl<'a> BuildContext for BuildDispatch<'a> {
         self.git
     }
 
-    fn interpreter(&self) -> &Interpreter {
-        self.interpreter
-    }
-
     fn build_options(&self) -> &BuildOptions {
         self.build_options
+    }
+
+    fn sources(&self) -> SourceStrategy {
+        self.sources
     }
 
     fn index_locations(&self) -> &IndexLocations {
@@ -139,14 +147,15 @@ impl<'a> BuildContext for BuildDispatch<'a> {
         let python_requirement = PythonRequirement::from_interpreter(self.interpreter);
         let markers = self.interpreter.markers();
         let tags = self.interpreter.tags()?;
+
         let resolver = Resolver::new(
-            Manifest::simple(requirements.to_vec()),
+            Manifest::simple(requirements.to_vec()).with_constraints(self.constraints.clone()),
             OptionsBuilder::new()
                 .exclude_newer(self.exclude_newer)
                 .index_strategy(self.index_strategy)
                 .build(),
             &python_requirement,
-            Some(markers),
+            ResolverMarkers::SpecificEnvironment(markers.clone()),
             Some(tags),
             self.flat_index,
             self.index,
@@ -240,6 +249,7 @@ impl<'a> BuildContext for BuildDispatch<'a> {
                 self.cache,
                 tags,
                 &HashStrategy::None,
+                self.build_options,
                 DistributionDatabase::new(
                     self.client,
                     self,
@@ -287,6 +297,7 @@ impl<'a> BuildContext for BuildDispatch<'a> {
             );
             wheels = Installer::new(venv)
                 .with_link_mode(self.link_mode)
+                .with_cache(self.cache)
                 .install(wheels)
                 .await
                 .context("Failed to install build dependencies")?;

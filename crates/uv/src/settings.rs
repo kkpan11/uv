@@ -9,28 +9,32 @@ use install_wheel_rs::linker::LinkMode;
 use pep508_rs::{ExtraName, RequirementOrigin};
 use pypi_types::Requirement;
 use uv_cache::{CacheArgs, Refresh};
-use uv_cli::options::{flag, resolver_installer_options, resolver_options};
 use uv_cli::{
-    AddArgs, ColorChoice, Commands, ExternalCommand, GlobalArgs, ListFormat, LockArgs, Maybe,
-    PipCheckArgs, PipCompileArgs, PipFreezeArgs, PipInstallArgs, PipListArgs, PipShowArgs,
+    options::{flag, resolver_installer_options, resolver_options},
+    ToolUpgradeArgs,
+};
+use uv_cli::{
+    AddArgs, ColorChoice, Commands, ExternalCommand, GlobalArgs, InitArgs, ListFormat, LockArgs,
+    Maybe, PipCheckArgs, PipCompileArgs, PipFreezeArgs, PipInstallArgs, PipListArgs, PipShowArgs,
     PipSyncArgs, PipTreeArgs, PipUninstallArgs, PythonFindArgs, PythonInstallArgs, PythonListArgs,
-    PythonPinArgs, PythonUninstallArgs, RemoveArgs, RunArgs, SyncArgs, ToolInstallArgs,
-    ToolListArgs, ToolRunArgs, ToolUninstallArgs, TreeArgs, VenvArgs,
+    PythonPinArgs, PythonUninstallArgs, RemoveArgs, RunArgs, SyncArgs, ToolDirArgs,
+    ToolInstallArgs, ToolListArgs, ToolRunArgs, ToolUninstallArgs, TreeArgs, VenvArgs,
 };
 use uv_client::Connectivity;
 use uv_configuration::{
-    BuildOptions, Concurrency, ConfigSettings, ExtrasSpecification, IndexStrategy,
-    KeyringProviderType, NoBinary, NoBuild, PreviewMode, Reinstall, SetupPyStrategy, TargetTriple,
-    Upgrade,
+    BuildOptions, Concurrency, ConfigSettings, ExtrasSpecification, HashCheckingMode,
+    IndexStrategy, KeyringProviderType, NoBinary, NoBuild, PreviewMode, Reinstall, SetupPyStrategy,
+    SourceStrategy, TargetTriple, Upgrade,
 };
-use uv_distribution::pyproject::DependencyType;
 use uv_normalize::PackageName;
 use uv_python::{Prefix, PythonFetch, PythonPreference, PythonVersion, Target};
 use uv_requirements::RequirementsSource;
-use uv_resolver::{AnnotationStyle, DependencyMode, ExcludeNewer, PreReleaseMode, ResolutionMode};
+use uv_resolver::{AnnotationStyle, DependencyMode, ExcludeNewer, PrereleaseMode, ResolutionMode};
 use uv_settings::{
     Combine, FilesystemOptions, Options, PipOptions, ResolverInstallerOptions, ResolverOptions,
 };
+use uv_warnings::warn_user_once;
+use uv_workspace::pyproject::DependencyType;
 
 use crate::commands::pip::operations::Modifications;
 
@@ -43,11 +47,11 @@ pub(crate) struct GlobalSettings {
     pub(crate) color: ColorChoice,
     pub(crate) native_tls: bool,
     pub(crate) connectivity: Connectivity,
-    pub(crate) isolated: bool,
     pub(crate) show_settings: bool,
     pub(crate) preview: PreviewMode,
     pub(crate) python_preference: PythonPreference,
     pub(crate) python_fetch: PythonFetch,
+    pub(crate) no_progress: bool,
 }
 
 impl GlobalSettings {
@@ -107,7 +111,6 @@ impl GlobalSettings {
             } else {
                 Connectivity::Online
             },
-            isolated: args.isolated,
             show_settings: args.show_settings,
             preview,
             python_preference: args
@@ -118,6 +121,7 @@ impl GlobalSettings {
                 .python_fetch
                 .combine(workspace.and_then(|workspace| workspace.globals.python_fetch))
                 .unwrap_or_default(),
+            no_progress: args.no_progress,
         }
     }
 }
@@ -145,15 +149,57 @@ impl CacheSettings {
     }
 }
 
+/// The resolved settings to use for a `init` invocation.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone)]
+pub(crate) struct InitSettings {
+    pub(crate) path: Option<String>,
+    pub(crate) name: Option<PackageName>,
+    pub(crate) r#virtual: bool,
+    pub(crate) no_readme: bool,
+    pub(crate) no_workspace: bool,
+    pub(crate) python: Option<String>,
+}
+
+impl InitSettings {
+    /// Resolve the [`InitSettings`] from the CLI and filesystem configuration.
+    #[allow(clippy::needless_pass_by_value)]
+    pub(crate) fn resolve(args: InitArgs, _filesystem: Option<FilesystemOptions>) -> Self {
+        let InitArgs {
+            path,
+            name,
+            r#virtual,
+            no_readme,
+            no_workspace,
+            python,
+        } = args;
+
+        Self {
+            path,
+            name,
+            r#virtual,
+            no_readme,
+            no_workspace,
+            python,
+        }
+    }
+}
+
 /// The resolved settings to use for a `run` invocation.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub(crate) struct RunSettings {
+    pub(crate) locked: bool,
+    pub(crate) frozen: bool,
     pub(crate) extras: ExtrasSpecification,
     pub(crate) dev: bool,
     pub(crate) command: ExternalCommand,
     pub(crate) with: Vec<String>,
+    pub(crate) with_requirements: Vec<PathBuf>,
+    pub(crate) isolated: bool,
+    pub(crate) show_resolution: bool,
     pub(crate) package: Option<PackageName>,
+    pub(crate) no_project: bool,
     pub(crate) python: Option<String>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: ResolverInstallerSettings,
@@ -171,14 +217,22 @@ impl RunSettings {
             no_dev,
             command,
             with,
+            with_requirements,
+            isolated,
+            locked,
+            frozen,
             installer,
             build,
             refresh,
             package,
+            no_project,
             python,
+            show_resolution,
         } = args;
 
         Self {
+            locked,
+            frozen,
             extras: ExtrasSpecification::from_args(
                 flag(all_extras, no_all_extras).unwrap_or_default(),
                 extra.unwrap_or_default(),
@@ -186,7 +240,14 @@ impl RunSettings {
             dev: flag(dev, no_dev).unwrap_or(true),
             command,
             with,
+            with_requirements: with_requirements
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
+            isolated,
+            show_resolution,
             package,
+            no_project,
             python,
             refresh: Refresh::from(refresh),
             settings: ResolverInstallerSettings::combine(
@@ -201,9 +262,12 @@ impl RunSettings {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub(crate) struct ToolRunSettings {
-    pub(crate) command: ExternalCommand,
+    pub(crate) command: Option<ExternalCommand>,
     pub(crate) from: Option<String>,
     pub(crate) with: Vec<String>,
+    pub(crate) with_requirements: Vec<PathBuf>,
+    pub(crate) isolated: bool,
+    pub(crate) show_resolution: bool,
     pub(crate) python: Option<String>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: ResolverInstallerSettings,
@@ -217,6 +281,9 @@ impl ToolRunSettings {
             command,
             from,
             with,
+            with_requirements,
+            isolated,
+            show_resolution,
             installer,
             build,
             refresh,
@@ -227,6 +294,12 @@ impl ToolRunSettings {
             command,
             from,
             with,
+            with_requirements: with_requirements
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
+            isolated,
+            show_resolution,
             python,
             refresh: Refresh::from(refresh),
             settings: ResolverInstallerSettings::combine(
@@ -244,10 +317,12 @@ pub(crate) struct ToolInstallSettings {
     pub(crate) package: String,
     pub(crate) from: Option<String>,
     pub(crate) with: Vec<String>,
+    pub(crate) with_requirements: Vec<PathBuf>,
     pub(crate) python: Option<String>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: ResolverInstallerSettings,
     pub(crate) force: bool,
+    pub(crate) editable: bool,
 }
 
 impl ToolInstallSettings {
@@ -256,8 +331,10 @@ impl ToolInstallSettings {
     pub(crate) fn resolve(args: ToolInstallArgs, filesystem: Option<FilesystemOptions>) -> Self {
         let ToolInstallArgs {
             package,
+            editable,
             from,
             with,
+            with_requirements,
             installer,
             force,
             build,
@@ -269,8 +346,13 @@ impl ToolInstallSettings {
             package,
             from,
             with,
+            with_requirements: with_requirements
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
             python,
             force,
+            editable,
             refresh: Refresh::from(refresh),
             settings: ResolverInstallerSettings::combine(
                 resolver_installer_options(installer, build),
@@ -283,15 +365,57 @@ impl ToolInstallSettings {
 /// The resolved settings to use for a `tool list` invocation.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
-pub(crate) struct ToolListSettings;
+pub(crate) struct ToolListSettings {
+    pub(crate) show_paths: bool,
+}
 
 impl ToolListSettings {
     /// Resolve the [`ToolListSettings`] from the CLI and filesystem configuration.
     #[allow(clippy::needless_pass_by_value)]
     pub(crate) fn resolve(args: ToolListArgs, _filesystem: Option<FilesystemOptions>) -> Self {
-        let ToolListArgs {} = args;
+        let ToolListArgs { show_paths } = args;
 
-        Self {}
+        Self { show_paths }
+    }
+}
+
+/// The resolved settings to use for a `tool upgrade` invocation.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone)]
+pub(crate) struct ToolUpgradeSettings {
+    pub(crate) name: Option<PackageName>,
+    pub(crate) settings: ResolverInstallerSettings,
+    pub(crate) refresh: Refresh,
+}
+
+impl ToolUpgradeSettings {
+    /// Resolve the [`ToolUpgradeSettings`] from the CLI and filesystem configuration.
+    #[allow(clippy::needless_pass_by_value)]
+    pub(crate) fn resolve(args: ToolUpgradeArgs, filesystem: Option<FilesystemOptions>) -> Self {
+        let ToolUpgradeArgs {
+            name,
+            all,
+            mut installer,
+            build,
+            refresh,
+        } = args;
+
+        if installer.upgrade {
+            // If `--upgrade` was passed explicitly, warn.
+            warn_user_once!("`--upgrade` is enabled by default on `uv tool upgrade`");
+        } else if installer.upgrade_package.is_empty() {
+            // If neither `--upgrade` nor `--upgrade-package` were passed in, assume `--upgrade`.
+            installer.upgrade = true;
+        }
+
+        Self {
+            name: name.filter(|_| !all),
+            settings: ResolverInstallerSettings::combine(
+                resolver_installer_options(installer, build),
+                filesystem,
+            ),
+            refresh: Refresh::from(refresh),
+        }
     }
 }
 
@@ -311,6 +435,23 @@ impl ToolUninstallSettings {
         Self {
             name: name.filter(|_| !all),
         }
+    }
+}
+
+/// The resolved settings to use for a `tool dir` invocation.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone)]
+pub(crate) struct ToolDirSettings {
+    pub(crate) bin: bool,
+}
+
+impl ToolDirSettings {
+    /// Resolve the [`ToolDirSettings`] from the CLI and filesystem configuration.
+    #[allow(clippy::needless_pass_by_value)]
+    pub(crate) fn resolve(args: ToolDirArgs, _filesystem: Option<FilesystemOptions>) -> Self {
+        let ToolDirArgs { bin } = args;
+
+        Self { bin }
     }
 }
 
@@ -416,6 +557,7 @@ impl PythonFindSettings {
 pub(crate) struct PythonPinSettings {
     pub(crate) request: Option<String>,
     pub(crate) resolved: bool,
+    pub(crate) no_workspace: bool,
 }
 
 impl PythonPinSettings {
@@ -426,11 +568,13 @@ impl PythonPinSettings {
             request,
             no_resolved,
             resolved,
+            no_workspace,
         } = args;
 
         Self {
             request,
             resolved: flag(resolved, no_resolved).unwrap_or(false),
+            no_workspace,
         }
     }
 }
@@ -443,6 +587,7 @@ pub(crate) struct SyncSettings {
     pub(crate) extras: ExtrasSpecification,
     pub(crate) dev: bool,
     pub(crate) modifications: Modifications,
+    pub(crate) package: Option<PackageName>,
     pub(crate) python: Option<String>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: ResolverInstallerSettings,
@@ -464,10 +609,18 @@ impl SyncSettings {
             installer,
             build,
             refresh,
+            package,
             python,
         } = args;
 
-        let modifications = if no_clean {
+        let settings = ResolverInstallerSettings::combine(
+            resolver_installer_options(installer, build),
+            filesystem,
+        );
+
+        // By default, sync with exact semantics, unless the user set `--no-build-isolation`;
+        // otherwise, we'll end up removing build dependencies.
+        let modifications = if no_clean || settings.no_build_isolation {
             Modifications::Sufficient
         } else {
             Modifications::Exact
@@ -482,12 +635,10 @@ impl SyncSettings {
             ),
             dev: flag(dev, no_dev).unwrap_or(true),
             modifications,
+            package,
             python,
             refresh: Refresh::from(refresh),
-            settings: ResolverInstallerSettings::combine(
-                resolver_installer_options(installer, build),
-                filesystem,
-            ),
+            settings,
         }
     }
 }
@@ -496,6 +647,8 @@ impl SyncSettings {
 #[allow(clippy::struct_excessive_bools, dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct LockSettings {
+    pub(crate) locked: bool,
+    pub(crate) frozen: bool,
     pub(crate) python: Option<String>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: ResolverSettings,
@@ -506,6 +659,8 @@ impl LockSettings {
     #[allow(clippy::needless_pass_by_value)]
     pub(crate) fn resolve(args: LockArgs, filesystem: Option<FilesystemOptions>) -> Self {
         let LockArgs {
+            locked,
+            frozen,
             resolver,
             build,
             refresh,
@@ -513,6 +668,8 @@ impl LockSettings {
         } = args;
 
         Self {
+            locked,
+            frozen,
             python,
             refresh: Refresh::from(refresh),
             settings: ResolverSettings::combine(resolver_options(resolver, build), filesystem),
@@ -524,6 +681,9 @@ impl LockSettings {
 #[allow(clippy::struct_excessive_bools, dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct AddSettings {
+    pub(crate) locked: bool,
+    pub(crate) frozen: bool,
+    pub(crate) no_sync: bool,
     pub(crate) requirements: Vec<RequirementsSource>,
     pub(crate) dependency_type: DependencyType,
     pub(crate) editable: Option<bool>,
@@ -547,11 +707,15 @@ impl AddSettings {
             dev,
             optional,
             editable,
+            no_editable,
             extra,
             raw_sources,
             rev,
             tag,
             branch,
+            no_sync,
+            locked,
+            frozen,
             installer,
             build,
             refresh,
@@ -573,15 +737,18 @@ impl AddSettings {
         };
 
         Self {
+            locked,
+            frozen,
+            no_sync,
             requirements,
             dependency_type,
-            editable,
             raw_sources,
             rev,
             tag,
             branch,
             package,
             python,
+            editable: flag(editable, no_editable),
             extras: extra.unwrap_or_default(),
             refresh: Refresh::from(refresh),
             settings: ResolverInstallerSettings::combine(
@@ -596,7 +763,10 @@ impl AddSettings {
 #[allow(clippy::struct_excessive_bools, dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct RemoveSettings {
-    pub(crate) requirements: Vec<PackageName>,
+    pub(crate) locked: bool,
+    pub(crate) frozen: bool,
+    pub(crate) no_sync: bool,
+    pub(crate) packages: Vec<PackageName>,
     pub(crate) dependency_type: DependencyType,
     pub(crate) package: Option<PackageName>,
     pub(crate) python: Option<String>,
@@ -611,7 +781,10 @@ impl RemoveSettings {
         let RemoveArgs {
             dev,
             optional,
-            requirements,
+            packages,
+            no_sync,
+            locked,
+            frozen,
             installer,
             build,
             refresh,
@@ -628,7 +801,10 @@ impl RemoveSettings {
         };
 
         Self {
-            requirements,
+            locked,
+            frozen,
+            no_sync,
+            packages,
             dependency_type,
             package,
             python,
@@ -645,11 +821,16 @@ impl RemoveSettings {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub(crate) struct TreeSettings {
+    pub(crate) locked: bool,
+    pub(crate) frozen: bool,
+    pub(crate) universal: bool,
     pub(crate) depth: u8,
     pub(crate) prune: Vec<PackageName>,
     pub(crate) package: Vec<PackageName>,
     pub(crate) no_dedupe: bool,
     pub(crate) invert: bool,
+    pub(crate) python_version: Option<PythonVersion>,
+    pub(crate) python_platform: Option<TargetTriple>,
     pub(crate) python: Option<String>,
     pub(crate) resolver: ResolverSettings,
 }
@@ -659,18 +840,28 @@ impl TreeSettings {
     pub(crate) fn resolve(args: TreeArgs, filesystem: Option<FilesystemOptions>) -> Self {
         let TreeArgs {
             tree,
+            universal,
+            locked,
+            frozen,
             build,
             resolver,
+            python_version,
+            python_platform,
             python,
         } = args;
 
         Self {
-            python,
+            locked,
+            frozen,
+            universal,
             depth: tree.depth,
             prune: tree.prune,
             package: tree.package,
             no_dedupe: tree.no_dedupe,
             invert: tree.invert,
+            python_version,
+            python_platform,
+            python,
             resolver: ResolverSettings::combine(resolver_options(resolver, build), filesystem),
         }
     }
@@ -682,7 +873,9 @@ pub(crate) struct PipCompileSettings {
     pub(crate) src_file: Vec<PathBuf>,
     pub(crate) constraint: Vec<PathBuf>,
     pub(crate) r#override: Vec<PathBuf>,
+    pub(crate) constraints_from_workspace: Vec<Requirement>,
     pub(crate) overrides_from_workspace: Vec<Requirement>,
+    pub(crate) build_constraint: Vec<PathBuf>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: PipSettings,
 }
@@ -697,6 +890,7 @@ impl PipCompileSettings {
             extra,
             all_extras,
             no_all_extras,
+            build_constraint,
             refresh,
             no_deps,
             deps,
@@ -719,8 +913,6 @@ impl PipCompileSettings {
             no_generate_hashes,
             legacy_setup_py,
             no_legacy_setup_py,
-            no_build_isolation,
-            build_isolation,
             no_build,
             build,
             no_binary,
@@ -743,6 +935,20 @@ impl PipCompileSettings {
             compat_args: _,
         } = args;
 
+        let constraints_from_workspace = if let Some(configuration) = &filesystem {
+            configuration
+                .constraint_dependencies
+                .clone()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|requirement| {
+                    Requirement::from(requirement.with_origin(RequirementOrigin::Workspace))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+
         let overrides_from_workspace = if let Some(configuration) = &filesystem {
             configuration
                 .override_dependencies
@@ -763,10 +969,15 @@ impl PipCompileSettings {
                 .into_iter()
                 .filter_map(Maybe::into_option)
                 .collect(),
+            build_constraint: build_constraint
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
             r#override: r#override
                 .into_iter()
                 .filter_map(Maybe::into_option)
                 .collect(),
+            constraints_from_workspace,
             overrides_from_workspace,
             refresh: Refresh::from(refresh),
             settings: PipSettings::combine(
@@ -776,7 +987,6 @@ impl PipCompileSettings {
                     no_build: flag(no_build, build),
                     no_binary,
                     only_binary,
-                    no_build_isolation: flag(no_build_isolation, build_isolation),
                     extra,
                     all_extras: flag(all_extras, no_all_extras),
                     no_deps: flag(no_deps, deps),
@@ -815,6 +1025,7 @@ impl PipCompileSettings {
 pub(crate) struct PipSyncSettings {
     pub(crate) src_file: Vec<PathBuf>,
     pub(crate) constraint: Vec<PathBuf>,
+    pub(crate) build_constraint: Vec<PathBuf>,
     pub(crate) dry_run: bool,
     pub(crate) refresh: Refresh,
     pub(crate) settings: PipSettings,
@@ -826,10 +1037,13 @@ impl PipSyncSettings {
         let PipSyncArgs {
             src_file,
             constraint,
+            build_constraint,
             installer,
             refresh,
             require_hashes,
             no_require_hashes,
+            verify_hashes,
+            no_verify_hashes,
             python,
             system,
             no_system,
@@ -841,8 +1055,6 @@ impl PipSyncSettings {
             no_allow_empty_requirements,
             legacy_setup_py,
             no_legacy_setup_py,
-            no_build_isolation,
-            build_isolation,
             no_build,
             build,
             no_binary,
@@ -861,6 +1073,10 @@ impl PipSyncSettings {
                 .into_iter()
                 .filter_map(Maybe::into_option)
                 .collect(),
+            build_constraint: build_constraint
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
             dry_run,
             refresh: Refresh::from(refresh),
             settings: PipSettings::combine(
@@ -871,6 +1087,7 @@ impl PipSyncSettings {
                     target,
                     prefix,
                     require_hashes: flag(require_hashes, no_require_hashes),
+                    verify_hashes: flag(verify_hashes, no_verify_hashes),
                     no_build: flag(no_build, build),
                     no_binary,
                     only_binary,
@@ -879,7 +1096,6 @@ impl PipSyncSettings {
                         no_allow_empty_requirements,
                     ),
                     legacy_setup_py: flag(legacy_setup_py, no_legacy_setup_py),
-                    no_build_isolation: flag(no_build_isolation, build_isolation),
                     python_version,
                     python_platform,
                     strict: flag(strict, no_strict),
@@ -903,7 +1119,9 @@ pub(crate) struct PipInstallSettings {
     pub(crate) editable: Vec<String>,
     pub(crate) constraint: Vec<PathBuf>,
     pub(crate) r#override: Vec<PathBuf>,
+    pub(crate) build_constraint: Vec<PathBuf>,
     pub(crate) dry_run: bool,
+    pub(crate) constraints_from_workspace: Vec<Requirement>,
     pub(crate) overrides_from_workspace: Vec<Requirement>,
     pub(crate) refresh: Refresh,
     pub(crate) settings: PipSettings,
@@ -921,12 +1139,15 @@ impl PipInstallSettings {
             extra,
             all_extras,
             no_all_extras,
+            build_constraint,
             refresh,
             no_deps,
             deps,
             require_hashes,
             no_require_hashes,
             installer,
+            verify_hashes,
+            no_verify_hashes,
             python,
             system,
             no_system,
@@ -936,8 +1157,6 @@ impl PipInstallSettings {
             prefix,
             legacy_setup_py,
             no_legacy_setup_py,
-            no_build_isolation,
-            build_isolation,
             no_build,
             build,
             no_binary,
@@ -949,6 +1168,20 @@ impl PipInstallSettings {
             dry_run,
             compat_args: _,
         } = args;
+
+        let constraints_from_workspace = if let Some(configuration) = &filesystem {
+            configuration
+                .constraint_dependencies
+                .clone()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|requirement| {
+                    Requirement::from(requirement.with_origin(RequirementOrigin::Workspace))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         let overrides_from_workspace = if let Some(configuration) = &filesystem {
             configuration
@@ -976,7 +1209,12 @@ impl PipInstallSettings {
                 .into_iter()
                 .filter_map(Maybe::into_option)
                 .collect(),
+            build_constraint: build_constraint
+                .into_iter()
+                .filter_map(Maybe::into_option)
+                .collect(),
             dry_run,
+            constraints_from_workspace,
             overrides_from_workspace,
             refresh: Refresh::from(refresh),
             settings: PipSettings::combine(
@@ -989,7 +1227,6 @@ impl PipInstallSettings {
                     no_build: flag(no_build, build),
                     no_binary,
                     only_binary,
-                    no_build_isolation: flag(no_build_isolation, build_isolation),
                     strict: flag(strict, no_strict),
                     extra,
                     all_extras: flag(all_extras, no_all_extras),
@@ -998,6 +1235,7 @@ impl PipInstallSettings {
                     python_version,
                     python_platform,
                     require_hashes: flag(require_hashes, no_require_hashes),
+                    verify_hashes: flag(verify_hashes, no_verify_hashes),
                     concurrent_builds: env(env::CONCURRENT_BUILDS),
                     concurrent_downloads: env(env::CONCURRENT_DOWNLOADS),
                     concurrent_installs: env(env::CONCURRENT_INSTALLS),
@@ -1094,8 +1332,7 @@ impl PipFreezeSettings {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub(crate) struct PipListSettings {
-    pub(crate) editable: bool,
-    pub(crate) exclude_editable: bool,
+    pub(crate) editable: Option<bool>,
     pub(crate) exclude: Vec<PackageName>,
     pub(crate) format: ListFormat,
     pub(crate) settings: PipSettings,
@@ -1118,8 +1355,7 @@ impl PipListSettings {
         } = args;
 
         Self {
-            editable,
-            exclude_editable,
+            editable: flag(editable, exclude_editable),
             exclude,
             format,
             settings: PipSettings::combine(
@@ -1175,6 +1411,7 @@ impl PipShowSettings {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub(crate) struct PipTreeSettings {
+    pub(crate) show_version_specifiers: bool,
     pub(crate) depth: u8,
     pub(crate) prune: Vec<PackageName>,
     pub(crate) package: Vec<PackageName>,
@@ -1188,6 +1425,7 @@ impl PipTreeSettings {
     /// Resolve the [`PipTreeSettings`] from the CLI and workspace configuration.
     pub(crate) fn resolve(args: PipTreeArgs, filesystem: Option<FilesystemOptions>) -> Self {
         let PipTreeArgs {
+            show_version_specifiers,
             tree,
             strict,
             no_strict,
@@ -1198,6 +1436,7 @@ impl PipTreeSettings {
         } = args;
 
         Self {
+            show_version_specifiers,
             depth: tree.depth,
             prune: tree.prune,
             no_dedupe: tree.no_dedupe,
@@ -1255,6 +1494,7 @@ pub(crate) struct VenvSettings {
     pub(crate) name: PathBuf,
     pub(crate) prompt: Option<String>,
     pub(crate) system_site_packages: bool,
+    pub(crate) relocatable: bool,
     pub(crate) settings: PipSettings,
 }
 
@@ -1270,6 +1510,7 @@ impl VenvSettings {
             name,
             prompt,
             system_site_packages,
+            relocatable,
             index_args,
             index_strategy,
             keyring_provider,
@@ -1284,6 +1525,7 @@ impl VenvSettings {
             name,
             prompt,
             system_site_packages,
+            relocatable,
             settings: PipSettings::combine(
                 PipOptions {
                     python,
@@ -1300,7 +1542,7 @@ impl VenvSettings {
     }
 }
 
-/// The resolved settings to use for an invocation of the `uv` CLI when installing dependencies.
+/// The resolved settings to use for an invocation of the uv CLI when installing dependencies.
 ///
 /// Combines the `[tool.uv]` persistent configuration with the command-line arguments
 /// ([`InstallerArgs`], represented as [`InstallerOptions`]).
@@ -1310,14 +1552,16 @@ pub(crate) struct InstallerSettingsRef<'a> {
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) config_setting: &'a ConfigSettings,
+    pub(crate) no_build_isolation: bool,
     pub(crate) exclude_newer: Option<ExcludeNewer>,
     pub(crate) link_mode: LinkMode,
     pub(crate) compile_bytecode: bool,
     pub(crate) reinstall: &'a Reinstall,
     pub(crate) build_options: &'a BuildOptions,
+    pub(crate) sources: SourceStrategy,
 }
 
-/// The resolved settings to use for an invocation of the `uv` CLI when resolving dependencies.
+/// The resolved settings to use for an invocation of the uv CLI when resolving dependencies.
 ///
 /// Combines the `[tool.uv]` persistent configuration with the command-line arguments
 /// ([`ResolverArgs`], represented as [`ResolverOptions`]).
@@ -1328,106 +1572,45 @@ pub(crate) struct ResolverSettings {
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) resolution: ResolutionMode,
-    pub(crate) prerelease: PreReleaseMode,
+    pub(crate) prerelease: PrereleaseMode,
     pub(crate) config_setting: ConfigSettings,
+    pub(crate) no_build_isolation: bool,
+    pub(crate) no_build_isolation_package: Vec<PackageName>,
     pub(crate) exclude_newer: Option<ExcludeNewer>,
     pub(crate) link_mode: LinkMode,
     pub(crate) upgrade: Upgrade,
     pub(crate) build_options: BuildOptions,
+    pub(crate) sources: SourceStrategy,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct ResolverSettingsRef<'a> {
     pub(crate) index_locations: &'a IndexLocations,
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) resolution: ResolutionMode,
-    pub(crate) prerelease: PreReleaseMode,
+    pub(crate) prerelease: PrereleaseMode,
     pub(crate) config_setting: &'a ConfigSettings,
+    pub(crate) no_build_isolation: bool,
+    pub(crate) no_build_isolation_package: &'a [PackageName],
     pub(crate) exclude_newer: Option<ExcludeNewer>,
     pub(crate) link_mode: LinkMode,
     pub(crate) upgrade: &'a Upgrade,
     pub(crate) build_options: &'a BuildOptions,
+    pub(crate) sources: SourceStrategy,
 }
 
 impl ResolverSettings {
     /// Resolve the [`ResolverSettings`] from the CLI and filesystem configuration.
     pub(crate) fn combine(args: ResolverOptions, filesystem: Option<FilesystemOptions>) -> Self {
-        let ResolverInstallerOptions {
-            index_url,
-            extra_index_url,
-            no_index,
-            find_links,
-            index_strategy,
-            keyring_provider,
-            resolution,
-            prerelease,
-            config_settings,
-            exclude_newer,
-            link_mode,
-            compile_bytecode: _,
-            upgrade,
-            upgrade_package,
-            reinstall: _,
-            reinstall_package: _,
-            no_build,
-            no_build_package,
-            no_binary,
-            no_binary_package,
-        } = filesystem
-            .map(FilesystemOptions::into_options)
-            .map(|options| options.top_level)
-            .unwrap_or_default();
+        let options = args.combine(ResolverOptions::from(
+            filesystem
+                .map(FilesystemOptions::into_options)
+                .map(|options| options.top_level)
+                .unwrap_or_default(),
+        ));
 
-        Self {
-            index_locations: IndexLocations::new(
-                args.index_url.combine(index_url),
-                args.extra_index_url
-                    .combine(extra_index_url)
-                    .unwrap_or_default(),
-                args.find_links.combine(find_links).unwrap_or_default(),
-                args.no_index.combine(no_index).unwrap_or_default(),
-            ),
-            resolution: args.resolution.combine(resolution).unwrap_or_default(),
-            prerelease: args.prerelease.combine(prerelease).unwrap_or_default(),
-            index_strategy: args
-                .index_strategy
-                .combine(index_strategy)
-                .unwrap_or_default(),
-            keyring_provider: args
-                .keyring_provider
-                .combine(keyring_provider)
-                .unwrap_or_default(),
-            config_setting: args
-                .config_settings
-                .combine(config_settings)
-                .unwrap_or_default(),
-            exclude_newer: args.exclude_newer.combine(exclude_newer),
-            link_mode: args.link_mode.combine(link_mode).unwrap_or_default(),
-            upgrade: Upgrade::from_args(
-                args.upgrade.combine(upgrade),
-                args.upgrade_package
-                    .combine(upgrade_package)
-                    .into_iter()
-                    .flatten()
-                    .map(Requirement::from)
-                    .collect(),
-            ),
-            build_options: BuildOptions::new(
-                NoBinary::from_args(
-                    args.no_binary.combine(no_binary),
-                    args.no_binary_package
-                        .combine(no_binary_package)
-                        .unwrap_or_default(),
-                ),
-                NoBuild::from_args(
-                    args.no_build.combine(no_build),
-                    args.no_build_package
-                        .combine(no_build_package)
-                        .unwrap_or_default(),
-                ),
-            ),
-        }
+        Self::from(options)
     }
 
     pub(crate) fn as_ref(&self) -> ResolverSettingsRef {
@@ -1438,18 +1621,57 @@ impl ResolverSettings {
             resolution: self.resolution,
             prerelease: self.prerelease,
             config_setting: &self.config_setting,
+            no_build_isolation: self.no_build_isolation,
+            no_build_isolation_package: &self.no_build_isolation_package,
             exclude_newer: self.exclude_newer,
             link_mode: self.link_mode,
             upgrade: &self.upgrade,
             build_options: &self.build_options,
+            sources: self.sources,
         }
     }
 }
 
-/// The resolved settings to use for an invocation of the `uv` CLI with both resolver and installer
+impl From<ResolverOptions> for ResolverSettings {
+    fn from(value: ResolverOptions) -> Self {
+        Self {
+            index_locations: IndexLocations::new(
+                value.index_url,
+                value.extra_index_url.unwrap_or_default(),
+                value.find_links.unwrap_or_default(),
+                value.no_index.unwrap_or_default(),
+            ),
+            resolution: value.resolution.unwrap_or_default(),
+            prerelease: value.prerelease.unwrap_or_default(),
+            index_strategy: value.index_strategy.unwrap_or_default(),
+            keyring_provider: value.keyring_provider.unwrap_or_default(),
+            config_setting: value.config_settings.unwrap_or_default(),
+            no_build_isolation: value.no_build_isolation.unwrap_or_default(),
+            no_build_isolation_package: value.no_build_isolation_package.unwrap_or_default(),
+            exclude_newer: value.exclude_newer,
+            link_mode: value.link_mode.unwrap_or_default(),
+            sources: SourceStrategy::from_args(value.no_sources.unwrap_or_default()),
+            upgrade: Upgrade::from_args(
+                value.upgrade,
+                value
+                    .upgrade_package
+                    .into_iter()
+                    .flatten()
+                    .map(Requirement::from)
+                    .collect(),
+            ),
+            build_options: BuildOptions::new(
+                NoBinary::from_args(value.no_binary, value.no_binary_package.unwrap_or_default()),
+                NoBuild::from_args(value.no_build, value.no_build_package.unwrap_or_default()),
+            ),
+        }
+    }
+}
+
+/// The resolved settings to use for an invocation of the uv CLI with both resolver and installer
 /// capabilities.
 ///
-/// Represents the shared settings that are used across all `uv` commands outside the `pip` API.
+/// Represents the shared settings that are used across all uv commands outside the `pip` API.
 /// Analogous to the settings contained in the `[tool.uv]` table, combined with [`ResolverInstallerArgs`].
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Default)]
@@ -1458,11 +1680,14 @@ pub(crate) struct ResolverInstallerSettings {
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) resolution: ResolutionMode,
-    pub(crate) prerelease: PreReleaseMode,
+    pub(crate) prerelease: PrereleaseMode,
     pub(crate) config_setting: ConfigSettings,
+    pub(crate) no_build_isolation: bool,
+    pub(crate) no_build_isolation_package: Vec<PackageName>,
     pub(crate) exclude_newer: Option<ExcludeNewer>,
     pub(crate) link_mode: LinkMode,
     pub(crate) compile_bytecode: bool,
+    pub(crate) sources: SourceStrategy,
     pub(crate) upgrade: Upgrade,
     pub(crate) reinstall: Reinstall,
     pub(crate) build_options: BuildOptions,
@@ -1474,107 +1699,33 @@ pub(crate) struct ResolverInstallerSettingsRef<'a> {
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) resolution: ResolutionMode,
-    pub(crate) prerelease: PreReleaseMode,
+    pub(crate) prerelease: PrereleaseMode,
     pub(crate) config_setting: &'a ConfigSettings,
+    pub(crate) no_build_isolation: bool,
+    pub(crate) no_build_isolation_package: &'a [PackageName],
     pub(crate) exclude_newer: Option<ExcludeNewer>,
     pub(crate) link_mode: LinkMode,
     pub(crate) compile_bytecode: bool,
+    pub(crate) sources: SourceStrategy,
     pub(crate) upgrade: &'a Upgrade,
     pub(crate) reinstall: &'a Reinstall,
     pub(crate) build_options: &'a BuildOptions,
 }
 
 impl ResolverInstallerSettings {
-    /// Resolve the [`ResolverInstallerSettings`] from the CLI and filesystem configuration.
+    /// Reconcile the [`ResolverInstallerSettings`] from the CLI and filesystem configuration.
     pub(crate) fn combine(
         args: ResolverInstallerOptions,
         filesystem: Option<FilesystemOptions>,
     ) -> Self {
-        let ResolverInstallerOptions {
-            index_url,
-            extra_index_url,
-            no_index,
-            find_links,
-            index_strategy,
-            keyring_provider,
-            resolution,
-            prerelease,
-            config_settings,
-            exclude_newer,
-            link_mode,
-            compile_bytecode,
-            upgrade,
-            upgrade_package,
-            reinstall,
-            reinstall_package,
-            no_build,
-            no_build_package,
-            no_binary,
-            no_binary_package,
-        } = filesystem
-            .map(FilesystemOptions::into_options)
-            .map(|options| options.top_level)
-            .unwrap_or_default();
+        let options = args.combine(
+            filesystem
+                .map(FilesystemOptions::into_options)
+                .map(|options| options.top_level)
+                .unwrap_or_default(),
+        );
 
-        Self {
-            index_locations: IndexLocations::new(
-                args.index_url.combine(index_url),
-                args.extra_index_url
-                    .combine(extra_index_url)
-                    .unwrap_or_default(),
-                args.find_links.combine(find_links).unwrap_or_default(),
-                args.no_index.combine(no_index).unwrap_or_default(),
-            ),
-            resolution: args.resolution.combine(resolution).unwrap_or_default(),
-            prerelease: args.prerelease.combine(prerelease).unwrap_or_default(),
-            index_strategy: args
-                .index_strategy
-                .combine(index_strategy)
-                .unwrap_or_default(),
-            keyring_provider: args
-                .keyring_provider
-                .combine(keyring_provider)
-                .unwrap_or_default(),
-            config_setting: args
-                .config_settings
-                .combine(config_settings)
-                .unwrap_or_default(),
-            exclude_newer: args.exclude_newer.combine(exclude_newer),
-            link_mode: args.link_mode.combine(link_mode).unwrap_or_default(),
-            compile_bytecode: args
-                .compile_bytecode
-                .combine(compile_bytecode)
-                .unwrap_or_default(),
-            upgrade: Upgrade::from_args(
-                args.upgrade.combine(upgrade),
-                args.upgrade_package
-                    .combine(upgrade_package)
-                    .into_iter()
-                    .flatten()
-                    .map(Requirement::from)
-                    .collect(),
-            ),
-            reinstall: Reinstall::from_args(
-                args.reinstall.combine(reinstall),
-                args.reinstall_package
-                    .combine(reinstall_package)
-                    .unwrap_or_default(),
-            ),
-            build_options: BuildOptions::new(
-                NoBinary::from_args(
-                    args.no_binary.combine(no_binary),
-                    args.no_binary_package
-                        .combine(no_binary_package)
-                        .unwrap_or_default(),
-                ),
-                NoBuild::from_args(
-                    args.no_build.combine(no_build),
-                    args.no_build_package
-                        .combine(no_build_package)
-                        .unwrap_or_default(),
-                ),
-            ),
-        }
+        Self::from(options)
     }
 
     pub(crate) fn as_ref(&self) -> ResolverInstallerSettingsRef {
@@ -1585,12 +1736,56 @@ impl ResolverInstallerSettings {
             resolution: self.resolution,
             prerelease: self.prerelease,
             config_setting: &self.config_setting,
+            no_build_isolation: self.no_build_isolation,
+            no_build_isolation_package: &self.no_build_isolation_package,
             exclude_newer: self.exclude_newer,
             link_mode: self.link_mode,
             compile_bytecode: self.compile_bytecode,
+            sources: self.sources,
             upgrade: &self.upgrade,
             reinstall: &self.reinstall,
             build_options: &self.build_options,
+        }
+    }
+}
+
+impl From<ResolverInstallerOptions> for ResolverInstallerSettings {
+    fn from(value: ResolverInstallerOptions) -> Self {
+        Self {
+            index_locations: IndexLocations::new(
+                value.index_url,
+                value.extra_index_url.unwrap_or_default(),
+                value.find_links.unwrap_or_default(),
+                value.no_index.unwrap_or_default(),
+            ),
+            resolution: value.resolution.unwrap_or_default(),
+            prerelease: value.prerelease.unwrap_or_default(),
+            index_strategy: value.index_strategy.unwrap_or_default(),
+            keyring_provider: value.keyring_provider.unwrap_or_default(),
+            config_setting: value.config_settings.unwrap_or_default(),
+            no_build_isolation: value.no_build_isolation.unwrap_or_default(),
+            no_build_isolation_package: value.no_build_isolation_package.unwrap_or_default(),
+            exclude_newer: value.exclude_newer,
+            link_mode: value.link_mode.unwrap_or_default(),
+            sources: SourceStrategy::from_args(value.no_sources.unwrap_or_default()),
+            compile_bytecode: value.compile_bytecode.unwrap_or_default(),
+            upgrade: Upgrade::from_args(
+                value.upgrade,
+                value
+                    .upgrade_package
+                    .into_iter()
+                    .flatten()
+                    .map(Requirement::from)
+                    .collect(),
+            ),
+            reinstall: Reinstall::from_args(
+                value.reinstall,
+                value.reinstall_package.unwrap_or_default(),
+            ),
+            build_options: BuildOptions::new(
+                NoBinary::from_args(value.no_binary, value.no_binary_package.unwrap_or_default()),
+                NoBuild::from_args(value.no_build, value.no_build_package.unwrap_or_default()),
+            ),
         }
     }
 }
@@ -1612,12 +1807,13 @@ pub(crate) struct PipSettings {
     pub(crate) index_strategy: IndexStrategy,
     pub(crate) keyring_provider: KeyringProviderType,
     pub(crate) no_build_isolation: bool,
+    pub(crate) no_build_isolation_package: Vec<PackageName>,
     pub(crate) build_options: BuildOptions,
     pub(crate) allow_empty_requirements: bool,
     pub(crate) strict: bool,
     pub(crate) dependency_mode: DependencyMode,
     pub(crate) resolution: ResolutionMode,
-    pub(crate) prerelease: PreReleaseMode,
+    pub(crate) prerelease: PrereleaseMode,
     pub(crate) output_file: Option<PathBuf>,
     pub(crate) no_strip_extras: bool,
     pub(crate) no_strip_markers: bool,
@@ -1640,7 +1836,8 @@ pub(crate) struct PipSettings {
     pub(crate) annotation_style: AnnotationStyle,
     pub(crate) link_mode: LinkMode,
     pub(crate) compile_bytecode: bool,
-    pub(crate) require_hashes: bool,
+    pub(crate) sources: SourceStrategy,
+    pub(crate) hash_checking: Option<HashCheckingMode>,
     pub(crate) upgrade: Upgrade,
     pub(crate) reinstall: Reinstall,
     pub(crate) concurrency: Concurrency,
@@ -1669,6 +1866,7 @@ impl PipSettings {
             no_binary,
             only_binary,
             no_build_isolation,
+            no_build_isolation_package,
             strict,
             extra,
             all_extras,
@@ -1699,6 +1897,8 @@ impl PipSettings {
             link_mode,
             compile_bytecode,
             require_hashes,
+            verify_hashes,
+            no_sources,
             upgrade,
             upgrade_package,
             reinstall,
@@ -1718,9 +1918,12 @@ impl PipSettings {
             resolution: top_level_resolution,
             prerelease: top_level_prerelease,
             config_settings: top_level_config_settings,
+            no_build_isolation: top_level_no_build_isolation,
+            no_build_isolation_package: top_level_no_build_isolation_package,
             exclude_newer: top_level_exclude_newer,
             link_mode: top_level_link_mode,
             compile_bytecode: top_level_compile_bytecode,
+            no_sources: top_level_no_sources,
             upgrade: top_level_upgrade,
             upgrade_package: top_level_upgrade_package,
             reinstall: top_level_reinstall,
@@ -1744,9 +1947,13 @@ impl PipSettings {
         let resolution = resolution.combine(top_level_resolution);
         let prerelease = prerelease.combine(top_level_prerelease);
         let config_settings = config_settings.combine(top_level_config_settings);
+        let no_build_isolation = no_build_isolation.combine(top_level_no_build_isolation);
+        let no_build_isolation_package =
+            no_build_isolation_package.combine(top_level_no_build_isolation_package);
         let exclude_newer = exclude_newer.combine(top_level_exclude_newer);
         let link_mode = link_mode.combine(top_level_link_mode);
         let compile_bytecode = compile_bytecode.combine(top_level_compile_bytecode);
+        let no_sources = no_sources.combine(top_level_no_sources);
         let upgrade = upgrade.combine(top_level_upgrade);
         let upgrade_package = upgrade_package.combine(top_level_upgrade_package);
         let reinstall = reinstall.combine(top_level_reinstall);
@@ -1817,6 +2024,10 @@ impl PipSettings {
                 .no_build_isolation
                 .combine(no_build_isolation)
                 .unwrap_or_default(),
+            no_build_isolation_package: args
+                .no_build_isolation_package
+                .combine(no_build_isolation_package)
+                .unwrap_or_default(),
             config_setting: args
                 .config_settings
                 .combine(config_settings)
@@ -1850,10 +2061,14 @@ impl PipSettings {
                 .combine(emit_index_annotation)
                 .unwrap_or_default(),
             link_mode: args.link_mode.combine(link_mode).unwrap_or_default(),
-            require_hashes: args
-                .require_hashes
-                .combine(require_hashes)
-                .unwrap_or_default(),
+            hash_checking: HashCheckingMode::from_args(
+                args.require_hashes
+                    .combine(require_hashes)
+                    .unwrap_or_default(),
+                args.verify_hashes
+                    .combine(verify_hashes)
+                    .unwrap_or_default(),
+            ),
             python: args.python.combine(python),
             system: args.system.combine(system).unwrap_or_default(),
             break_system_packages: args
@@ -1866,6 +2081,9 @@ impl PipSettings {
                 .compile_bytecode
                 .combine(compile_bytecode)
                 .unwrap_or_default(),
+            sources: SourceStrategy::from_args(
+                args.no_sources.combine(no_sources).unwrap_or_default(),
+            ),
             strict: args.strict.combine(strict).unwrap_or_default(),
             upgrade: Upgrade::from_args(
                 args.upgrade.combine(upgrade),
@@ -1927,10 +2145,13 @@ impl<'a> From<ResolverInstallerSettingsRef<'a>> for ResolverSettingsRef<'a> {
             resolution: settings.resolution,
             prerelease: settings.prerelease,
             config_setting: settings.config_setting,
+            no_build_isolation: settings.no_build_isolation,
+            no_build_isolation_package: settings.no_build_isolation_package,
             exclude_newer: settings.exclude_newer,
             link_mode: settings.link_mode,
             upgrade: settings.upgrade,
             build_options: settings.build_options,
+            sources: settings.sources,
         }
     }
 }
@@ -1942,11 +2163,13 @@ impl<'a> From<ResolverInstallerSettingsRef<'a>> for InstallerSettingsRef<'a> {
             index_strategy: settings.index_strategy,
             keyring_provider: settings.keyring_provider,
             config_setting: settings.config_setting,
+            no_build_isolation: settings.no_build_isolation,
             exclude_newer: settings.exclude_newer,
             link_mode: settings.link_mode,
             compile_bytecode: settings.compile_bytecode,
             reinstall: settings.reinstall,
             build_options: settings.build_options,
+            sources: settings.sources,
         }
     }
 }

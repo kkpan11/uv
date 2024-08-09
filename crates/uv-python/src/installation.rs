@@ -88,13 +88,6 @@ impl PythonInstallation {
     ) -> Result<Self, Error> {
         let request = request.unwrap_or_default();
 
-        // Perform a fetch aggressively if managed Python is preferred
-        if matches!(preference, PythonPreference::Managed) && python_fetch.is_automatic() {
-            if let Some(request) = PythonDownloadRequest::try_from_request(&request) {
-                return Self::fetch(request.fill(), client_builder, cache, reporter).await;
-            }
-        }
-
         // Search for the installation
         match Self::find(&request, environments, preference, cache) {
             Ok(venv) => Ok(venv),
@@ -104,7 +97,7 @@ impl PythonInstallation {
                     && python_fetch.is_automatic()
                     && client_builder.connectivity.is_online() =>
             {
-                if let Some(request) = PythonDownloadRequest::try_from_request(&request) {
+                if let Some(request) = PythonDownloadRequest::from_request(&request) {
                     debug!("Requested Python not found, checking for available download...");
                     match Self::fetch(request.fill(), client_builder, cache, reporter).await {
                         Ok(installation) => Ok(installation),
@@ -136,7 +129,9 @@ impl PythonInstallation {
         let client = client_builder.build();
 
         info!("Fetching requested Python...");
-        let result = download.fetch(&client, installations_dir, reporter).await?;
+        let result = download
+            .fetch(&client, installations_dir, cache, reporter)
+            .await?;
 
         let path = match result {
             DownloadResult::AlreadyAvailable(path) => path,
@@ -166,15 +161,7 @@ impl PythonInstallation {
     }
 
     pub fn key(&self) -> PythonInstallationKey {
-        PythonInstallationKey::new(
-            LenientImplementationName::from(self.interpreter.implementation_name()),
-            self.interpreter.python_major(),
-            self.interpreter.python_minor(),
-            self.interpreter.python_patch(),
-            self.os(),
-            self.arch(),
-            self.libc(),
-        )
+        self.interpreter.key()
     }
 
     /// Return the Python [`Version`] of the Python installation as reported by its interpreter.
@@ -189,17 +176,17 @@ impl PythonInstallation {
 
     /// Return the [`Arch`] of the Python installation as reported by its interpreter.
     pub fn arch(&self) -> Arch {
-        Arch::from(&self.interpreter.platform().arch())
+        self.interpreter.arch()
     }
 
     /// Return the [`Libc`] of the Python installation as reported by its interpreter.
     pub fn libc(&self) -> Libc {
-        Libc::from(self.interpreter.platform().os())
+        self.interpreter.libc()
     }
 
     /// Return the [`Os`] of the Python installation as reported by its interpreter.
     pub fn os(&self) -> Os {
-        Os::from(self.interpreter.platform().os())
+        self.interpreter.os()
     }
 
     /// Return the [`Interpreter`] for the Python installation.
@@ -345,8 +332,14 @@ impl PartialOrd for PythonInstallationKey {
         Some(self.cmp(other))
     }
 }
+
 impl Ord for PythonInstallationKey {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.to_string().cmp(&other.to_string())
+        self.implementation
+            .cmp(&other.implementation)
+            .then_with(|| self.version().cmp(&other.version()))
+            .then_with(|| self.os.to_string().cmp(&other.os.to_string()))
+            .then_with(|| self.arch.to_string().cmp(&other.arch.to_string()))
+            .then_with(|| self.libc.to_string().cmp(&other.libc.to_string()))
     }
 }

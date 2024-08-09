@@ -37,6 +37,7 @@ pub(crate) async fn pip_uninstall(
     printer: Printer,
 ) -> Result<ExitStatus> {
     let start = std::time::Instant::now();
+
     let client_builder = BaseClientBuilder::new()
         .connectivity(connectivity)
         .native_tls(native_tls)
@@ -145,7 +146,7 @@ pub(crate) async fn pip_uninstall(
             if installed.is_empty() {
                 writeln!(
                     printer.stderr(),
-                    "{}{} Skipping {} as it is not installed.",
+                    "{}{} Skipping {} as it is not installed",
                     "warning".yellow().bold(),
                     ":".bold(),
                     package.as_ref().bold()
@@ -161,7 +162,7 @@ pub(crate) async fn pip_uninstall(
             if installed.is_empty() {
                 writeln!(
                     printer.stderr(),
-                    "{}{} Skipping {} as it is not installed.",
+                    "{}{} Skipping {} as it is not installed",
                     "warning".yellow().bold(),
                     ":".bold(),
                     url.as_ref().bold()
@@ -180,7 +181,7 @@ pub(crate) async fn pip_uninstall(
     if distributions.is_empty() {
         writeln!(
             printer.stderr(),
-            "{}{} No packages to uninstall.",
+            "{}{} No packages to uninstall",
             "warning".yellow().bold(),
             ":".bold(),
         )?;

@@ -3,6 +3,7 @@ use std::fmt::Write;
 use anstream::eprint;
 use anyhow::Result;
 use owo_colors::OwoColorize;
+use pep508_rs::PackageName;
 use tracing::debug;
 
 use distribution_types::{IndexLocations, Resolution};
@@ -11,8 +12,8 @@ use uv_auth::store_credentials_from_url;
 use uv_cache::Cache;
 use uv_client::{BaseClientBuilder, Connectivity, FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
-    BuildOptions, Concurrency, ConfigSettings, ExtrasSpecification, IndexStrategy, PreviewMode,
-    Reinstall, SetupPyStrategy, Upgrade,
+    BuildOptions, Concurrency, ConfigSettings, ExtrasSpecification, HashCheckingMode,
+    IndexStrategy, PreviewMode, Reinstall, SetupPyStrategy, SourceStrategy, Upgrade,
 };
 use uv_configuration::{KeyringProviderType, TargetTriple};
 use uv_dispatch::BuildDispatch;
@@ -23,11 +24,12 @@ use uv_python::{
 };
 use uv_requirements::{RequirementsSource, RequirementsSpecification};
 use uv_resolver::{
-    DependencyMode, ExcludeNewer, FlatIndex, OptionsBuilder, PreReleaseMode, PythonRequirement,
-    ResolutionMode,
+    DependencyMode, ExcludeNewer, FlatIndex, OptionsBuilder, PrereleaseMode, PythonRequirement,
+    ResolutionMode, ResolverMarkers,
 };
 use uv_types::{BuildIsolation, HashStrategy};
 
+use crate::commands::pip::loggers::{DefaultInstallLogger, DefaultResolveLogger};
 use crate::commands::pip::operations::Modifications;
 use crate::commands::pip::{operations, resolution_environment};
 use crate::commands::{ExitStatus, SharedState};
@@ -38,10 +40,11 @@ use crate::printer::Printer;
 pub(crate) async fn pip_sync(
     requirements: &[RequirementsSource],
     constraints: &[RequirementsSource],
+    build_constraints: &[RequirementsSource],
     reinstall: Reinstall,
     link_mode: LinkMode,
     compile: bool,
-    require_hashes: bool,
+    hash_checking: Option<HashCheckingMode>,
     index_locations: IndexLocations,
     index_strategy: IndexStrategy,
     keyring_provider: KeyringProviderType,
@@ -50,6 +53,7 @@ pub(crate) async fn pip_sync(
     connectivity: Connectivity,
     config_settings: &ConfigSettings,
     no_build_isolation: bool,
+    no_build_isolation_package: Vec<PackageName>,
     build_options: BuildOptions,
     python_version: Option<PythonVersion>,
     python_platform: Option<TargetTriple>,
@@ -60,6 +64,7 @@ pub(crate) async fn pip_sync(
     break_system_packages: bool,
     target: Option<Target>,
     prefix: Option<Prefix>,
+    sources: SourceStrategy,
     concurrency: Concurrency,
     native_tls: bool,
     preview: PreviewMode,
@@ -77,7 +82,7 @@ pub(crate) async fn pip_sync(
     let extras = ExtrasSpecification::default();
     let upgrade = Upgrade::default();
     let resolution_mode = ResolutionMode::default();
-    let prerelease_mode = PreReleaseMode::default();
+    let prerelease_mode = PrereleaseMode::default();
     let dependency_mode = DependencyMode::Direct;
 
     // Read all requirements from the provided sources.
@@ -102,6 +107,10 @@ pub(crate) async fn pip_sync(
         &client_builder,
     )
     .await?;
+
+    // Read build constraints.
+    let build_constraints =
+        operations::read_constraints(build_constraints, &client_builder).await?;
 
     // Validate that the requirements are non-empty.
     if !allow_empty_requirements {
@@ -180,12 +189,13 @@ pub(crate) async fn pip_sync(
     let (tags, markers) = resolution_environment(python_version, python_platform, interpreter)?;
 
     // Collect the set of required hashes.
-    let hasher = if require_hashes {
+    let hasher = if let Some(hash_checking) = hash_checking {
         HashStrategy::from_requirements(
             requirements
                 .iter()
                 .map(|entry| (&entry.requirement, entry.hashes.as_slice())),
             Some(&markers),
+            hash_checking,
         )?
     } else {
         HashStrategy::None
@@ -222,8 +232,10 @@ pub(crate) async fn pip_sync(
     // Determine whether to enable build isolation.
     let build_isolation = if no_build_isolation {
         BuildIsolation::Shared(&environment)
-    } else {
+    } else if no_build_isolation_package.is_empty() {
         BuildIsolation::Isolated
+    } else {
+        BuildIsolation::SharedPackage(&environment, &no_build_isolation_package)
     };
 
     // Initialize any shared state.
@@ -239,6 +251,7 @@ pub(crate) async fn pip_sync(
     let build_dispatch = BuildDispatch::new(
         &client,
         &cache,
+        &build_constraints,
         interpreter,
         &index_locations,
         &flat_index,
@@ -252,6 +265,7 @@ pub(crate) async fn pip_sync(
         link_mode,
         &build_options,
         exclude_newer,
+        sources,
         concurrency,
         preview,
     );
@@ -281,7 +295,7 @@ pub(crate) async fn pip_sync(
         &reinstall,
         &upgrade,
         Some(&tags),
-        Some(&markers),
+        ResolverMarkers::SpecificEnvironment((*markers).clone()),
         python_requirement,
         &client,
         &flat_index,
@@ -289,16 +303,15 @@ pub(crate) async fn pip_sync(
         &build_dispatch,
         concurrency,
         options,
+        Box::new(DefaultResolveLogger),
         printer,
         preview,
-        false,
     )
     .await
     {
         Ok(resolution) => Resolution::from(resolution),
         Err(operations::Error::Resolve(uv_resolver::ResolveError::NoSolution(err))) => {
-            let report = miette::Report::msg(format!("{err}"))
-                .context("No solution found when resolving dependencies:");
+            let report = miette::Report::msg(format!("{err}")).context(err.header());
             eprint!("{report:?}");
             return Ok(ExitStatus::Failure);
         }
@@ -323,6 +336,7 @@ pub(crate) async fn pip_sync(
         &build_dispatch,
         &cache,
         &environment,
+        Box::new(DefaultInstallLogger),
         dry_run,
         printer,
         preview,

@@ -12,6 +12,7 @@ use std::str::FromStr;
 use assert_cmd::assert::{Assert, OutputAssertExt};
 use assert_fs::assert::PathAssert;
 use assert_fs::fixture::{ChildPath, PathChild, PathCreateDir, SymlinkToFile};
+use indoc::formatdoc;
 use predicates::prelude::predicate;
 use regex::Regex;
 
@@ -25,10 +26,17 @@ use uv_python::{
 // Exclude any packages uploaded after this date.
 static EXCLUDE_NEWER: &str = "2024-03-25T00:00:00Z";
 
+pub const PACKSE_VERSION: &str = "0.3.34";
+
 /// Using a find links url allows using `--index-url` instead of `--extra-index-url` in tests
 /// to prevent dependency confusion attacks against our test suite.
-pub const BUILD_VENDOR_LINKS_URL: &str =
-    "https://raw.githubusercontent.com/astral-sh/packse/0.3.30/vendor/links.html";
+pub fn build_vendor_links_url() -> String {
+    format!("https://raw.githubusercontent.com/astral-sh/packse/{PACKSE_VERSION}/vendor/links.html")
+}
+
+pub fn packse_index_url() -> String {
+    format!("https://astral-sh.github.io/packse/{PACKSE_VERSION}/simple-html/")
+}
 
 #[doc(hidden)] // Macro and test context only, don't use directly.
 pub const INSTA_FILTERS: &[(&str, &str)] = &[
@@ -231,7 +239,7 @@ impl TestContext {
 
             // And for the symlink we created in the test the Python path
             filters.extend(
-                Self::path_patterns(&python_dir.join(version.to_string()))
+                Self::path_patterns(python_dir.join(version.to_string()))
                     .into_iter()
                     .map(|pattern| {
                         (
@@ -299,6 +307,13 @@ impl TestContext {
         // Destroy any remaining UNC prefixes (Windows only)
         filters.push((r"\\\\\?\\".to_string(), String::new()));
 
+        // Remove the version from the packse url in lockfile snapshots. This avoid having a huge
+        // diff any time we upgrade packse
+        filters.push((
+            format!("https://astral-sh.github.io/packse/{PACKSE_VERSION}/"),
+            "https://astral-sh.github.io/packse/PACKSE_VERSION/".to_string(),
+        ));
+
         Self {
             temp_dir,
             cache_dir,
@@ -312,7 +327,7 @@ impl TestContext {
         }
     }
 
-    /// Create a `uv` command for testing.
+    /// Create a uv command for testing.
     pub fn command(&self) -> Command {
         let mut command = Command::new(get_bin());
         self.add_shared_args(&mut command);
@@ -337,7 +352,7 @@ impl TestContext {
             .env("UV_NO_WRAP", "1")
             .env("HOME", self.home_dir.as_os_str())
             .env("UV_PYTHON_INSTALL_DIR", "")
-            .env("UV_TEST_PYTHON_PATH", &self.python_path())
+            .env("UV_TEST_PYTHON_PATH", self.python_path())
             .env("UV_EXCLUDE_NEWER", EXCLUDE_NEWER)
             .current_dir(self.temp_dir.path());
 
@@ -402,6 +417,21 @@ impl TestContext {
     pub fn help(&self) -> Command {
         let mut command = Command::new(get_bin());
         command.arg("help");
+
+        if cfg!(all(windows, debug_assertions)) {
+            // TODO(konstin): Reduce stack usage in debug mode enough that the tests pass with the
+            // default windows stack of 1MB
+            command.env("UV_STACK_SIZE", (2 * 1024 * 1024).to_string());
+        }
+
+        command
+    }
+
+    /// Create a `uv init` command with options shared across scenarios.
+    pub fn init(&self) -> Command {
+        let mut command = Command::new(get_bin());
+        command.arg("init");
+        self.add_shared_args(&mut command);
         command
     }
 
@@ -458,7 +488,7 @@ impl TestContext {
     /// Create a `uv run` command with options shared across scenarios.
     pub fn run(&self) -> Command {
         let mut command = Command::new(get_bin());
-        command.arg("run");
+        command.arg("run").env("UV_SHOW_RESOLUTION", "1");
         self.add_shared_args(&mut command);
         command
     }
@@ -466,34 +496,34 @@ impl TestContext {
     /// Create a `uv tool run` command with options shared across scenarios.
     pub fn tool_run(&self) -> Command {
         let mut command = Command::new(get_bin());
-        command.arg("tool").arg("run");
+        command
+            .arg("tool")
+            .arg("run")
+            .env("UV_SHOW_RESOLUTION", "1");
+        self.add_shared_args(&mut command);
+        command
+    }
+
+    /// Create a `uv upgrade run` command with options shared across scenarios.
+    pub fn tool_upgrade(&self) -> Command {
+        let mut command = Command::new(get_bin());
+        command.arg("tool").arg("upgrade");
         self.add_shared_args(&mut command);
         command
     }
 
     /// Create a `uv tool install` command with options shared across scenarios.
-    pub fn tool_install(&self) -> std::process::Command {
-        let mut command = self.tool_install_without_exclude_newer();
-        command.arg("--exclude-newer").arg(EXCLUDE_NEWER);
-        command
-    }
-
-    /// Create a `uv tool install` command with no `--exclude-newer` option.
-    ///
-    /// One should avoid using this in tests to the extent possible because
-    /// it can result in tests failing when the index state changes. Therefore,
-    /// if you use this, there should be some other kind of mitigation in place.
-    /// For example, pinning package versions.
-    pub fn tool_install_without_exclude_newer(&self) -> std::process::Command {
-        let mut command = std::process::Command::new(get_bin());
+    pub fn tool_install(&self) -> Command {
+        let mut command = Command::new(get_bin());
         command.arg("tool").arg("install");
         self.add_shared_args(&mut command);
+        command.env("UV_EXCLUDE_NEWER", EXCLUDE_NEWER);
         command
     }
 
     /// Create a `uv tool list` command with options shared across scenarios.
-    pub fn tool_list(&self) -> std::process::Command {
-        let mut command = std::process::Command::new(get_bin());
+    pub fn tool_list(&self) -> Command {
+        let mut command = Command::new(get_bin());
         command.arg("tool").arg("list");
         self.add_shared_args(&mut command);
         command
@@ -508,8 +538,8 @@ impl TestContext {
     }
 
     /// Create a `uv tool uninstall` command with options shared across scenarios.
-    pub fn tool_uninstall(&self) -> std::process::Command {
-        let mut command = std::process::Command::new(get_bin());
+    pub fn tool_uninstall(&self) -> Command {
+        let mut command = Command::new(get_bin());
         command.arg("tool").arg("uninstall");
         self.add_shared_args(&mut command);
         command
@@ -539,10 +569,18 @@ impl TestContext {
         command
     }
 
-    /// Create a `uv clean` command.
+    /// Create a `uv cache clean` command.
     pub fn clean(&self) -> Command {
         let mut command = Command::new(get_bin());
-        command.arg("clean");
+        command.arg("cache").arg("clean");
+        self.add_shared_args(&mut command);
+        command
+    }
+
+    /// Create a `uv cache prune` command.
+    pub fn prune(&self) -> Command {
+        let mut command = Command::new(get_bin());
+        command.arg("cache").arg("prune");
         self.add_shared_args(&mut command);
         command
     }
@@ -860,11 +898,11 @@ pub fn run_and_format<T: AsRef<str>>(
     // cause the set of dependencies to be the same across platforms.
     if cfg!(windows) {
         if let Some(windows_filters) = windows_filters {
-            // The optional leading +/- is for install logs, the optional next line is for lock files
+            // The optional leading +/- is for install logs, the optional next line is for lockfiles
             let windows_only_deps = [
-                ("( [+-] )?colorama==\\d+(\\.[\\d+])+\n(    # via .*\n)?"),
+                ("( [+-] )?colorama==\\d+(\\.[\\d+])+( \\\\\n    --hash=.*)?\n(    # via .*\n)?"),
                 ("( [+-] )?colorama==\\d+(\\.[\\d+])+(\\s+# via .*)?\n"),
-                ("( [+-] )?tzdata==\\d+(\\.[\\d+])+\n(    # via .*\n)?"),
+                ("( [+-] )?tzdata==\\d+(\\.[\\d+])+( \\\\\n    --hash=.*)?\n(    # via .*\n)?"),
                 ("( [+-] )?tzdata==\\d+(\\.[\\d+])+(\\s+# via .*)?\n"),
             ];
             let mut removed_packages = 0;
@@ -926,6 +964,28 @@ pub fn copy_dir_ignore(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> anyhow::
             fs_err::copy(entry.path(), dst.as_ref().join(relative))?;
         }
     }
+    Ok(())
+}
+
+/// Create a stub package `name` in `dir` with the given `pyproject.toml` body.
+pub fn make_project(dir: &Path, name: &str, body: &str) -> anyhow::Result<()> {
+    let pyproject_toml = formatdoc! {r#"
+        [project]
+        name = "{name}"
+        version = "0.1.0"
+        description = "Test package for direct URLs in branches"
+        requires-python = ">=3.11,<3.13"
+        {body}
+
+        [build-system]
+        requires = ["flit_core>=3.8,<4"]
+        build-backend = "flit_core.buildapi"
+        "#
+    };
+    fs_err::create_dir_all(dir)?;
+    fs_err::write(dir.join("pyproject.toml"), pyproject_toml)?;
+    fs_err::create_dir(dir.join(name))?;
+    fs_err::write(dir.join(name).join("__init__.py"), "")?;
     Ok(())
 }
 

@@ -61,6 +61,11 @@ impl VersionSpecifiers {
     pub fn contains(&self, version: &Version) -> bool {
         self.iter().all(|specifier| specifier.contains(version))
     }
+
+    /// Returns `true` if the specifiers are empty is empty.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl FromIterator<VersionSpecifier> for VersionSpecifiers {
@@ -95,6 +100,12 @@ impl std::fmt::Display for VersionSpecifiers {
             }
         }
         Ok(())
+    }
+}
+
+impl Default for VersionSpecifiers {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -394,11 +405,41 @@ impl VersionSpecifier {
             version,
         }
     }
+    /// `!=<version>`
+    pub fn not_equals_version(version: Version) -> Self {
+        Self {
+            operator: Operator::NotEqual,
+            version,
+        }
+    }
 
     /// `>=<version>`
     pub fn greater_than_equal_version(version: Version) -> Self {
         Self {
             operator: Operator::GreaterThanEqual,
+            version,
+        }
+    }
+    /// `><version>`
+    pub fn greater_than_version(version: Version) -> Self {
+        Self {
+            operator: Operator::GreaterThan,
+            version,
+        }
+    }
+
+    /// `<=<version>`
+    pub fn less_than_equal_version(version: Version) -> Self {
+        Self {
+            operator: Operator::LessThanEqual,
+            version,
+        }
+    }
+
+    /// `<<version>`
+    pub fn less_than_version(version: Version) -> Self {
+        Self {
+            operator: Operator::LessThan,
             version,
         }
     }
@@ -526,7 +567,7 @@ impl VersionSpecifier {
                     return false;
                 }
 
-                // According to PEP 440, this ignores the prerelease special rules
+                // According to PEP 440, this ignores the pre-release special rules
                 // pypa/packaging disagrees: https://github.com/pypa/packaging/issues/617
                 other >= this
             }
@@ -582,6 +623,22 @@ impl VersionSpecifier {
         }
 
         other > this
+    }
+
+    /// Whether this version specifier rejects versions below a lower cutoff.
+    pub fn has_lower_bound(&self) -> bool {
+        match self.operator() {
+            Operator::Equal
+            | Operator::EqualStar
+            | Operator::ExactEqual
+            | Operator::TildeEqual
+            | Operator::GreaterThan
+            | Operator::GreaterThanEqual => true,
+            Operator::LessThanEqual
+            | Operator::LessThan
+            | Operator::NotEqualStar
+            | Operator::NotEqual => false,
+        }
     }
 }
 

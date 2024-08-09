@@ -127,7 +127,7 @@ impl<'a> BaseClientBuilder<'a> {
                 value.parse::<u64>()
                     .or_else(|_| {
                         // On parse error, warn and use the default timeout
-                        warn_user_once!("Ignoring invalid value from environment for UV_HTTP_TIMEOUT. Expected integer number of seconds, got \"{value}\".");
+                        warn_user_once!("Ignoring invalid value from environment for `UV_HTTP_TIMEOUT`. Expected an integer number of seconds, got \"{value}\".");
                         Ok(default_timeout)
                     })
             })
@@ -175,7 +175,7 @@ impl<'a> BaseClientBuilder<'a> {
                 client_core
             };
 
-            client_core.build().expect("Failed to build HTTP client.")
+            client_core.build().expect("Failed to build HTTP client")
         });
 
         // Wrap in any relevant middleware.
@@ -290,7 +290,9 @@ fn is_extended_transient_error(res: &Result<Response, reqwest_middleware::Error>
     // Check for connection reset errors, these are usually `Body` errors which are not retried by default.
     if let Err(reqwest_middleware::Error::Reqwest(err)) = res {
         if let Some(io) = find_source::<std::io::Error>(&err) {
-            if io.kind() == std::io::ErrorKind::ConnectionReset {
+            if io.kind() == std::io::ErrorKind::ConnectionReset
+                || io.kind() == std::io::ErrorKind::UnexpectedEof
+            {
                 return true;
             }
         }

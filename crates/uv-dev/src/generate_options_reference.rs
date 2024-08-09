@@ -11,10 +11,10 @@ use pretty_assertions::StrComparison;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use uv_distribution::pyproject::ToolUv as WorkspaceOptions;
 use uv_macros::OptionsMetadata;
 use uv_options_metadata::{OptionField, OptionSet, OptionsMetadata, Visit};
 use uv_settings::Options as SettingsOptions;
+use uv_workspace::pyproject::ToolUv as WorkspaceOptions;
 
 use crate::generate_all::Mode;
 use crate::ROOT_DIR;
@@ -42,7 +42,10 @@ pub(crate) struct Args {
 pub(crate) fn main(args: &Args) -> Result<()> {
     let reference_string = generate();
     let filename = "settings.md";
-    let reference_path = PathBuf::from(ROOT_DIR).join("docs").join(filename);
+    let reference_path = PathBuf::from(ROOT_DIR)
+        .join("docs")
+        .join("reference")
+        .join(filename);
 
     match args.mode {
         Mode::DryRun => {
@@ -105,7 +108,7 @@ fn generate() -> String {
 fn generate_set(output: &mut String, set: Set, parents: &mut Vec<Set>) {
     match &set {
         Set::Global(_) => {
-            output.push_str("### Global\n");
+            output.push_str("## Global\n");
         }
         Set::Named { name, .. } => {
             let title = parents
@@ -113,7 +116,7 @@ fn generate_set(output: &mut String, set: Set, parents: &mut Vec<Set>) {
                 .filter_map(|set| set.name())
                 .chain(std::iter::once(name.as_str()))
                 .join(".");
-            writeln!(output, "#### `{title}`\n").unwrap();
+            writeln!(output, "## `{title}`\n").unwrap();
 
             if let Some(documentation) = set.metadata().documentation() {
                 output.push_str(documentation);
@@ -176,7 +179,7 @@ impl Set {
 }
 
 fn emit_field(output: &mut String, name: &str, field: &OptionField, parents: &[Set]) {
-    let header_level = if parents.is_empty() { "####" } else { "#####" };
+    let header_level = if parents.is_empty() { "###" } else { "####" };
     let parents_anchor = parents.iter().filter_map(|parent| parent.name()).join("_");
 
     if parents_anchor.is_empty() {
@@ -216,7 +219,18 @@ fn emit_field(output: &mut String, name: &str, field: &OptionField, parents: &[S
     output.push_str("\n\n");
     output.push_str(&format!("**Default value**: `{}`\n", field.default));
     output.push('\n');
-    output.push_str(&format!("**Type**: `{}`\n", field.value_type));
+    if let Some(possible_values) = field
+        .possible_values
+        .as_ref()
+        .filter(|values| !values.is_empty())
+    {
+        output.push_str("**Possible values**:\n\n");
+        for value in possible_values {
+            output.push_str(format!("- {value}\n").as_str());
+        }
+    } else {
+        output.push_str(&format!("**Type**: `{}`\n", field.value_type));
+    }
     output.push('\n');
     output.push_str("**Example usage**:\n\n");
     output.push_str(&format_tab(

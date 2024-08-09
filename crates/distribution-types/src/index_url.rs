@@ -1,11 +1,10 @@
+use itertools::Either;
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::path::Path;
 use std::str::FromStr;
-
-use itertools::Either;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use thiserror::Error;
 use url::{ParseError, Url};
 
@@ -13,10 +12,10 @@ use pep508_rs::{VerbatimUrl, VerbatimUrlError};
 
 use crate::Verbatim;
 
-static PYPI_URL: Lazy<Url> = Lazy::new(|| Url::parse("https://pypi.org/simple").unwrap());
+static PYPI_URL: LazyLock<Url> = LazyLock::new(|| Url::parse("https://pypi.org/simple").unwrap());
 
-static DEFAULT_INDEX_URL: Lazy<IndexUrl> =
-    Lazy::new(|| IndexUrl::Pypi(VerbatimUrl::from_url(PYPI_URL.clone())));
+static DEFAULT_INDEX_URL: LazyLock<IndexUrl> =
+    LazyLock::new(|| IndexUrl::Pypi(VerbatimUrl::from_url(PYPI_URL.clone())));
 
 /// The URL of an index to use for fetching packages (e.g., PyPI).
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -384,6 +383,11 @@ impl<'a> IndexLocations {
     /// Return an iterator over the [`FlatIndexLocation`] entries.
     pub fn flat_index(&'a self) -> impl Iterator<Item = &'a FlatIndexLocation> + 'a {
         self.flat_index.iter()
+    }
+
+    /// Return the `--no-index` flag.
+    pub fn no_index(&self) -> bool {
+        self.no_index
     }
 
     /// Clone the index locations into a [`IndexUrls`] instance.

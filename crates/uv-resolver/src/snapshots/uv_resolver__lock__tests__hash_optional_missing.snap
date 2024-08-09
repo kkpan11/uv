@@ -5,31 +5,33 @@ expression: result
 Ok(
     Lock {
         version: 1,
-        distributions: [
-            Distribution {
-                id: DistributionId {
+        fork_markers: None,
+        requires_python: None,
+        options: ResolverOptions {
+            resolution_mode: Highest,
+            prerelease_mode: IfNecessaryOrExplicit,
+            exclude_newer: None,
+        },
+        packages: [
+            Package {
+                id: PackageId {
                     name: PackageName(
                         "anyio",
                     ),
                     version: "4.3.0",
-                    source: Path(
-                        "file:///foo/bar",
+                    source: Registry(
+                        UrlString(
+                            "https://pypi.org/simple",
+                        ),
                     ),
                 },
                 sdist: None,
                 wheels: [
                     Wheel {
                         url: UrlString(
-                            "file:///foo/bar/anyio-4.3.0-py3-none-any.whl",
+                            "https://files.pythonhosted.org/packages/14/fd/2f20c40b45e4fb4324834aea24bd4afdf1143390242c0b33774da0e2e34f/anyio-4.3.0-py3-none-any.whl",
                         ),
-                        hash: Some(
-                            Hash(
-                                HashDigest {
-                                    algorithm: Sha256,
-                                    digest: "048e05d0f6caeed70d731f3db756d35dcc1f35747c8c403364a8332c630441b8",
-                                },
-                            ),
-                        ),
+                        hash: None,
                         size: None,
                         filename: WheelFilename {
                             name: PackageName(
@@ -49,20 +51,22 @@ Ok(
                         },
                     },
                 ],
+                fork_markers: None,
                 dependencies: [],
                 optional_dependencies: {},
                 dev_dependencies: {},
             },
         ],
-        requires_python: None,
         by_id: {
-            DistributionId {
+            PackageId {
                 name: PackageName(
                     "anyio",
                 ),
                 version: "4.3.0",
-                source: Path(
-                    "file:///foo/bar",
+                source: Registry(
+                    UrlString(
+                        "https://pypi.org/simple",
+                    ),
                 ),
             }: 0,
         },

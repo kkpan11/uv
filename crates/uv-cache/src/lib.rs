@@ -120,7 +120,7 @@ pub struct Cache {
     ///
     /// Included to ensure that the temporary directory exists for the length of the operation, but
     /// is dropped at the end as appropriate.
-    _temp_dir_drop: Option<Arc<tempfile::TempDir>>,
+    temp_dir: Option<Arc<tempfile::TempDir>>,
 }
 
 impl Cache {
@@ -129,7 +129,7 @@ impl Cache {
         Self {
             root: root.into(),
             refresh: Refresh::None(Timestamp::now()),
-            _temp_dir_drop: None,
+            temp_dir: None,
         }
     }
 
@@ -139,7 +139,7 @@ impl Cache {
         Ok(Self {
             root: temp_dir.path().to_path_buf(),
             refresh: Refresh::None(Timestamp::now()),
-            _temp_dir_drop: Some(Arc::new(temp_dir)),
+            temp_dir: Some(Arc::new(temp_dir)),
         })
     }
 
@@ -229,26 +229,6 @@ impl Cache {
         }
     }
 
-    /// Returns `true` if a cache entry is up-to-date. Unlike [`Cache::freshness`], this method does
-    /// not take the [`Refresh`] policy into account.
-    ///
-    /// A cache entry is considered up-to-date if it was created after the [`Cache`] instance itself
-    /// was initialized.
-    pub fn is_fresh(&self, entry: &CacheEntry) -> io::Result<bool> {
-        // Grab the cutoff timestamp.
-        let timestamp = match &self.refresh {
-            Refresh::None(timestamp) => timestamp,
-            Refresh::All(timestamp) => timestamp,
-            Refresh::Packages(_packages, timestamp) => timestamp,
-        };
-
-        match fs::metadata(entry.path()) {
-            Ok(metadata) => Ok(Timestamp::from_metadata(&metadata) >= *timestamp),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
-            Err(err) => Err(err),
-        }
-    }
-
     /// Persist a temporary directory to the artifact store, returning its unique ID.
     pub async fn persist(
         &self,
@@ -271,7 +251,12 @@ impl Cache {
         Ok(id)
     }
 
-    /// Initialize the cache.
+    /// Returns `true` if the [`Cache`] is temporary.
+    pub fn is_temporary(&self) -> bool {
+        self.temp_dir.is_some()
+    }
+
+    /// Initialize the [`Cache`].
     pub fn init(self) -> Result<Self, io::Error> {
         let root = &self.root;
 
@@ -340,7 +325,7 @@ impl Cache {
     }
 
     /// Run the garbage collector on the cache, removing any dangling entries.
-    pub fn prune(&self) -> Result<Removal, io::Error> {
+    pub fn prune(&self, ci: bool) -> Result<Removal, io::Error> {
         let mut summary = Removal::default();
 
         // First, remove any top-level directories that are unused. These typically represent
@@ -371,7 +356,50 @@ impl Cache {
             }
         }
 
-        // Second, remove any unused archives (by searching for archives that are not symlinked).
+        // Second, remove any cached environments. These are never referenced by symlinks, so we can
+        // remove them directly.
+        match fs::read_dir(self.bucket(CacheBucket::Environments)) {
+            Ok(entries) => {
+                for entry in entries {
+                    let entry = entry?;
+                    let path = fs_err::canonicalize(entry.path())?;
+                    debug!("Removing dangling cache entry: {}", path.display());
+                    summary += rm_rf(path)?;
+                }
+            }
+            Err(err) if err.kind() == io::ErrorKind::NotFound => (),
+            Err(err) => return Err(err),
+        }
+
+        // Third, if enabled, remove all unzipped wheels, leaving only the wheel archives.
+        if ci {
+            // Remove the entire pre-built wheel cache, since every entry is an unzipped wheel.
+            match fs::read_dir(self.bucket(CacheBucket::Wheels)) {
+                Ok(entries) => {
+                    for entry in entries {
+                        let entry = entry?;
+                        let path = fs_err::canonicalize(entry.path())?;
+                        if path.is_dir() {
+                            debug!("Removing unzipped wheel entry: {}", path.display());
+                            summary += rm_rf(path)?;
+                        }
+                    }
+                }
+                Err(err) if err.kind() == io::ErrorKind::NotFound => (),
+                Err(err) => return Err(err),
+            }
+
+            // Remove any unzipped wheels (i.e., symlinks) from the built wheels cache.
+            for entry in walkdir::WalkDir::new(self.bucket(CacheBucket::SourceDistributions)) {
+                let entry = entry?;
+                if entry.file_type().is_symlink() {
+                    debug!("Removing unzipped wheel entry: {}", entry.path().display());
+                    summary += rm_rf(entry.path())?;
+                }
+            }
+        }
+
+        // Third, remove any unused archives (by searching for archives that are not symlinked).
         // TODO(charlie): Remove any unused source distributions. This requires introspecting the
         // cache contents, e.g., reading and deserializing the manifests.
         let mut references = FxHashSet::default();
@@ -382,7 +410,9 @@ impl Cache {
                 for entry in walkdir::WalkDir::new(bucket) {
                     let entry = entry?;
                     if entry.file_type().is_symlink() {
-                        references.insert(entry.path().canonicalize()?);
+                        if let Ok(target) = fs_err::canonicalize(entry.path()) {
+                            references.insert(target);
+                        }
                     }
                 }
             }
@@ -392,26 +422,11 @@ impl Cache {
             Ok(entries) => {
                 for entry in entries {
                     let entry = entry?;
-                    let path = entry.path().canonicalize()?;
+                    let path = fs_err::canonicalize(entry.path())?;
                     if !references.contains(&path) {
                         debug!("Removing dangling cache entry: {}", path.display());
                         summary += rm_rf(path)?;
                     }
-                }
-            }
-            Err(err) if err.kind() == io::ErrorKind::NotFound => (),
-            Err(err) => return Err(err),
-        }
-
-        // Third, remove any cached environments. These are never referenced by symlinks, so we can
-        // remove them directly.
-        match fs::read_dir(self.bucket(CacheBucket::Environments)) {
-            Ok(entries) => {
-                for entry in entries {
-                    let entry = entry?;
-                    let path = entry.path().canonicalize()?;
-                    debug!("Removing dangling cache entry: {}", path.display());
-                    summary += rm_rf(path)?;
                 }
             }
             Err(err) if err.kind() == io::ErrorKind::NotFound => (),
@@ -674,7 +689,9 @@ impl CacheBucket {
             Self::FlatIndex => "flat-index-v0",
             Self::Git => "git-v0",
             Self::Interpreter => "interpreter-v2",
-            Self::Simple => "simple-v9",
+            // Note that when bumping this, you'll also need to bump it
+            // in crates/uv/tests/cache_clean.rs.
+            Self::Simple => "simple-v12",
             Self::Wheels => "wheels-v1",
             Self::Archive => "archive-v0",
             Self::Builds => "builds-v0",
@@ -704,8 +721,8 @@ impl CacheBucket {
                 let root = cache.bucket(self).join(WheelCacheKind::Pypi);
                 summary += rm_rf(root.join(name.to_string()))?;
 
-                // For alternate indices, we expect a directory for every index, followed by a
-                // directory per package (indexed by name).
+                // For alternate indices, we expect a directory for every index (under an `index`
+                // subdirectory), followed by a directory per package (indexed by name).
                 let root = cache.bucket(self).join(WheelCacheKind::Index);
                 for directory in directories(root) {
                     summary += rm_rf(directory.join(name.to_string()))?;
@@ -723,8 +740,8 @@ impl CacheBucket {
                 let root = cache.bucket(self).join(WheelCacheKind::Pypi);
                 summary += rm_rf(root.join(name.to_string()))?;
 
-                // For alternate indices, we expect a directory for every index, followed by a
-                // directory per package (indexed by name).
+                // For alternate indices, we expect a directory for every index (under an `index`
+                // subdirectory), followed by a directory per package (indexed by name).
                 let root = cache.bucket(self).join(WheelCacheKind::Index);
                 for directory in directories(root) {
                     summary += rm_rf(directory.join(name.to_string()))?;
@@ -767,9 +784,9 @@ impl CacheBucket {
                 let root = cache.bucket(self).join(WheelCacheKind::Pypi);
                 summary += rm_rf(root.join(format!("{name}.rkyv")))?;
 
-                // For alternate indices, we expect a directory for every index, followed by a
-                // MsgPack file per package, indexed by name.
-                let root = cache.bucket(self).join(WheelCacheKind::Url);
+                // For alternate indices, we expect a directory for every index (under an `index`
+                // subdirectory), followed by a directory per package (indexed by name).
+                let root = cache.bucket(self).join(WheelCacheKind::Index);
                 for directory in directories(root) {
                     summary += rm_rf(directory.join(format!("{name}.rkyv")))?;
                 }
@@ -967,9 +984,6 @@ impl Freshness {
 }
 
 /// A refresh policy for cache entries.
-///
-/// Each policy stores a timestamp, even if no entries are refreshed, to enable out-of-policy
-/// freshness checks via [`Cache::is_fresh`].
 #[derive(Debug, Clone)]
 pub enum Refresh {
     /// Don't refresh any entries.
@@ -1000,5 +1014,43 @@ impl Refresh {
     /// Returns `true` if no packages should be reinstalled.
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None(_))
+    }
+
+    /// Combine two [`Refresh`] policies, taking the "max" of the two policies.
+    #[must_use]
+    pub fn combine(self, other: Refresh) -> Self {
+        /// Return the maximum of two timestamps.
+        fn max(a: Timestamp, b: Timestamp) -> Timestamp {
+            if a > b {
+                a
+            } else {
+                b
+            }
+        }
+
+        match (self, other) {
+            // If the policy is `None`, return the existing refresh policy.
+            // Take the `max` of the two timestamps.
+            (Self::None(t1), Refresh::None(t2)) => Refresh::None(max(t1, t2)),
+            (Self::None(t1), Refresh::All(t2)) => Refresh::All(max(t1, t2)),
+            (Self::None(t1), Refresh::Packages(packages, t2)) => {
+                Refresh::Packages(packages, max(t1, t2))
+            }
+
+            // If the policy is `All`, refresh all packages.
+            (Self::All(t1), Refresh::None(t2)) => Refresh::All(max(t1, t2)),
+            (Self::All(t1), Refresh::All(t2)) => Refresh::All(max(t1, t2)),
+            (Self::All(t1), Refresh::Packages(_packages, t2)) => Refresh::All(max(t1, t2)),
+
+            // If the policy is `Packages`, take the "max" of the two policies.
+            (Self::Packages(packages, t1), Refresh::None(t2)) => {
+                Refresh::Packages(packages, max(t1, t2))
+            }
+            (Self::Packages(_packages, t1), Refresh::All(t2)) => Refresh::All(max(t1, t2)),
+            (Self::Packages(packages1, t1), Refresh::Packages(packages2, t2)) => Refresh::Packages(
+                packages1.into_iter().chain(packages2).collect(),
+                max(t1, t2),
+            ),
+        }
     }
 }

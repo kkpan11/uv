@@ -3,6 +3,7 @@ use pep508_rs::PackageName;
 
 use pypi_types::Requirement;
 use rustc_hash::FxHashMap;
+use uv_cache::{Refresh, Timestamp};
 
 /// Whether to reinstall packages.
 #[derive(Debug, Default, Clone)]
@@ -42,6 +43,17 @@ impl Reinstall {
     /// Returns `true` if all packages should be reinstalled.
     pub fn is_all(&self) -> bool {
         matches!(self, Self::All)
+    }
+}
+
+/// Create a [`Refresh`] policy by integrating the [`Reinstall`] policy.
+impl From<Reinstall> for Refresh {
+    fn from(value: Reinstall) -> Self {
+        match value {
+            Reinstall::None => Self::None(Timestamp::now()),
+            Reinstall::All => Self::All(Timestamp::now()),
+            Reinstall::Packages(packages) => Self::Packages(packages, Timestamp::now()),
+        }
     }
 }
 
@@ -114,6 +126,19 @@ impl Upgrade {
             )
         } else {
             Either::Left(std::iter::empty())
+        }
+    }
+}
+
+/// Create a [`Refresh`] policy by integrating the [`Upgrade`] policy.
+impl From<Upgrade> for Refresh {
+    fn from(value: Upgrade) -> Self {
+        match value {
+            Upgrade::None => Self::None(Timestamp::now()),
+            Upgrade::All => Self::All(Timestamp::now()),
+            Upgrade::Packages(packages) => {
+                Self::Packages(packages.into_keys().collect::<Vec<_>>(), Timestamp::now())
+            }
         }
     }
 }

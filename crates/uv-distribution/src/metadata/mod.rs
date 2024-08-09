@@ -3,14 +3,13 @@ use std::path::Path;
 
 use thiserror::Error;
 
+use crate::metadata::lowering::LoweringError;
+pub use crate::metadata::requires_dist::RequiresDist;
 use pep440_rs::{Version, VersionSpecifiers};
 use pypi_types::{HashDigest, Metadata23};
-use uv_configuration::PreviewMode;
+use uv_configuration::{PreviewMode, SourceStrategy};
 use uv_normalize::{ExtraName, GroupName, PackageName};
-
-use crate::metadata::lowering::LoweringError;
-pub use crate::metadata::requires_dist::{RequiresDist, DEV_DEPENDENCIES};
-use crate::WorkspaceError;
+use uv_workspace::WorkspaceError;
 
 mod lowering;
 mod requires_dist;
@@ -57,7 +56,9 @@ impl Metadata {
     /// dependencies.
     pub async fn from_workspace(
         metadata: Metadata23,
-        project_root: &Path,
+        install_path: &Path,
+        lock_path: &Path,
+        sources: SourceStrategy,
         preview_mode: PreviewMode,
     ) -> Result<Self, MetadataError> {
         // Lower the requirements.
@@ -66,13 +67,15 @@ impl Metadata {
             requires_dist,
             provides_extras,
             dev_dependencies,
-        } = RequiresDist::from_workspace(
+        } = RequiresDist::from_project_maybe_workspace(
             pypi_types::RequiresDist {
                 name: metadata.name,
                 requires_dist: metadata.requires_dist,
                 provides_extras: metadata.provides_extras,
             },
-            project_root,
+            install_path,
+            lock_path,
+            sources,
             preview_mode,
         )
         .await?;

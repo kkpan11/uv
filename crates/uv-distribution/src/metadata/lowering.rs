@@ -2,21 +2,20 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use distribution_filename::DistExtension;
 use path_absolutize::Absolutize;
-use thiserror::Error;
-use url::Url;
-
 use pep440_rs::VersionSpecifiers;
 use pep508_rs::{VerbatimUrl, VersionOrUrl};
-use pypi_types::{Requirement, RequirementSource, VerbatimParsedUrl};
+use pypi_types::{ParsedUrlError, Requirement, RequirementSource, VerbatimParsedUrl};
+use thiserror::Error;
+use url::Url;
 use uv_configuration::PreviewMode;
 use uv_fs::{relative_to, Simplified};
 use uv_git::GitReference;
 use uv_normalize::PackageName;
 use uv_warnings::warn_user_once;
-
-use crate::pyproject::Source;
-use crate::Workspace;
+use uv_workspace::pyproject::Source;
+use uv_workspace::Workspace;
 
 /// An error parsing and merging `tool.uv.sources` with
 /// `project.{dependencies,optional-dependencies}`.
@@ -42,6 +41,8 @@ pub enum LoweringError {
     WorkspaceFalse,
     #[error("Editable must refer to a local directory, not a file: `{0}`")]
     EditableFile(String),
+    #[error(transparent)]
+    ParsedUrl(#[from] ParsedUrlError),
     #[error(transparent)] // Function attaches the context
     RelativeTo(io::Error),
 }
@@ -93,7 +94,7 @@ pub(crate) fn lower_requirement(
     };
 
     if preview.is_disabled() {
-        warn_user_once!("`uv.sources` is experimental and may change without warning.");
+        warn_user_once!("`uv.sources` is experimental and may change without warning");
     }
 
     let source = match source {
@@ -156,10 +157,14 @@ pub(crate) fn lower_requirement(
                 verbatim_url.set_fragment(Some(subdirectory));
             }
 
+            let ext = DistExtension::from_path(url.path())
+                .map_err(|err| ParsedUrlError::MissingExtensionUrl(url.to_string(), err))?;
+
             let verbatim_url = VerbatimUrl::from_url(verbatim_url);
             RequirementSource::Url {
                 location: url,
                 subdirectory: subdirectory.map(PathBuf::from),
+                ext,
                 url: verbatim_url,
             }
         }
@@ -201,19 +206,37 @@ pub(crate) fn lower_requirement(
             if matches!(requirement.version_or_url, Some(VersionOrUrl::Url(_))) {
                 return Err(LoweringError::ConflictingUrls);
             }
-            let path = workspace
+            let member = workspace
                 .packages()
                 .get(&requirement.name)
                 .ok_or(LoweringError::UndeclaredWorkspacePackage)?
                 .clone();
-            // The lockfile is relative to the workspace root.
-            let relative_to_workspace = relative_to(path.root(), workspace.install_path())
+
+            // Say we have:
+            // ```
+            // root
+            // ├── main_workspace  <- We want to the path from here ...
+            // │   ├── pyproject.toml
+            // │   └── uv.lock
+            // └──current_workspace
+            //    └── packages
+            //        └── current_package  <- ... to here.
+            //            └── pyproject.toml
+            // ```
+            // The path we need in the lockfile: `../current_workspace/packages/current_project`
+            // member root: `/root/current_workspace/packages/current_project`
+            // workspace install root: `/root/current_workspace`
+            // relative to workspace: `packages/current_project`
+            // workspace lock root: `../current_workspace`
+            // relative to main workspace: `../current_workspace/packages/current_project`
+            let relative_to_workspace = relative_to(member.root(), workspace.install_path())
                 .map_err(LoweringError::RelativeTo)?;
-            let url = VerbatimUrl::parse_absolute_path(path.root())?
-                .with_given(relative_to_workspace.to_string_lossy());
+            let relative_to_main_workspace = workspace.lock_path().join(relative_to_workspace);
+            let url = VerbatimUrl::parse_absolute_path(member.root())?
+                .with_given(relative_to_main_workspace.to_string_lossy());
             RequirementSource::Directory {
-                install_path: path.root().clone(),
-                lock_path: relative_to_workspace,
+                install_path: member.root().clone(),
+                lock_path: relative_to_main_workspace,
                 url,
                 editable: editable.unwrap_or(true),
             }
@@ -273,6 +296,8 @@ fn path_source(
         Ok(RequirementSource::Path {
             install_path: absolute_path,
             lock_path: relative_to_workspace,
+            ext: DistExtension::from_path(path)
+                .map_err(|err| ParsedUrlError::MissingExtensionPath(path.to_path_buf(), err))?,
             url,
         })
     }

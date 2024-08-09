@@ -1,22 +1,23 @@
-use std::borrow::Cow;
-use std::fmt::{self, Formatter};
-use std::{env, io};
-use std::{path::Path, path::PathBuf, str::FromStr};
-
-use itertools::Itertools;
-use pep440_rs::{Version, VersionSpecifiers};
+use itertools::{Either, Itertools};
+use regex::Regex;
 use same_file::is_same_file;
+use std::borrow::Cow;
+use std::env::consts::EXE_SUFFIX;
+use std::fmt::{self, Formatter};
+use std::{env, io, iter};
+use std::{path::Path, path::PathBuf, str::FromStr};
 use thiserror::Error;
 use tracing::{debug, instrument, trace};
 use which::{which, which_all};
 
+use pep440_rs::{Version, VersionSpecifiers};
 use uv_cache::Cache;
 use uv_configuration::PreviewMode;
 use uv_fs::Simplified;
 use uv_warnings::warn_user_once;
 
 use crate::downloads::PythonDownloadRequest;
-use crate::implementation::{ImplementationName, LenientImplementationName};
+use crate::implementation::ImplementationName;
 use crate::installation::PythonInstallation;
 use crate::interpreter::Error as InterpreterError;
 use crate::managed::ManagedPythonInstallations;
@@ -25,6 +26,7 @@ use crate::virtualenv::{
     conda_prefix_from_env, virtualenv_from_env, virtualenv_from_working_dir,
     virtualenv_python_executable,
 };
+use crate::which::is_executable;
 use crate::{Interpreter, PythonVersion};
 
 /// A request to find a Python installation.
@@ -59,12 +61,11 @@ pub enum PythonRequest {
 pub enum PythonPreference {
     /// Only use managed Python installations; never use system Python installations.
     OnlyManaged,
-    /// Prefer installed Python installations, only download managed Python installations if no system Python installation is found.
-    ///
-    /// Installed managed Python installations are still preferred over system Python installations.
     #[default]
-    Installed,
-    /// Prefer managed Python installations over system Python installations, even if fetching is required.
+    /// Prefer managed Python installations over system Python installations.
+    ///
+    /// System Python installations are still preferred over downloading managed Python versions.
+    /// Use `only-managed` to always fetch a managed Python version.
     Managed,
     /// Prefer system Python installations over managed Python installations.
     ///
@@ -149,7 +150,7 @@ pub enum PythonSource {
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    IO(#[from] io::Error),
+    Io(#[from] io::Error),
 
     /// An error was encountering when retrieving interpreter information.
     #[error(transparent)]
@@ -269,7 +270,7 @@ fn python_executables_from_installed<'a>(
                                 version.matches_version(&installation.version())
                             })
                     })
-                    .inspect(|installation| debug!("Found managed Python `{installation}`"))
+                    .inspect(|installation| debug!("Found managed installation `{installation}`"))
                     .map(|installation| (PythonSource::Managed, installation.executable())))
             })
     })
@@ -303,7 +304,7 @@ fn python_executables_from_installed<'a>(
 
     match preference {
         PythonPreference::OnlyManaged => Box::new(from_managed_installations),
-        PythonPreference::Managed | PythonPreference::Installed => Box::new(
+        PythonPreference::Managed => Box::new(
             from_managed_installations
                 .chain(from_search_path)
                 .chain(from_py_launcher),
@@ -360,10 +361,8 @@ fn python_executables_from_search_path<'a>(
     let search_path =
         env::var_os("UV_TEST_PYTHON_PATH").unwrap_or(env::var_os("PATH").unwrap_or_default());
 
-    let possible_names: Vec<_> = version
-        .unwrap_or(&VersionRequest::Any)
-        .possible_names(implementation)
-        .collect();
+    let version_request = version.unwrap_or(&VersionRequest::Any);
+    let possible_names: Vec<_> = version_request.possible_names(implementation).collect();
 
     trace!(
         "Searching PATH for executables: {}",
@@ -371,7 +370,8 @@ fn python_executables_from_search_path<'a>(
     );
 
     // Split and iterate over the paths instead of using `which_all` so we can
-    // check multiple names per directory while respecting the search path order
+    // check multiple names per directory while respecting the search path order and python names
+    // precedence.
     let search_dirs: Vec<_> = env::split_paths(&search_path).collect();
     search_dirs
         .into_iter()
@@ -391,8 +391,11 @@ fn python_executables_from_search_path<'a>(
                     which::which_in_global(&*name, Some(&dir))
                         .into_iter()
                         .flatten()
+                        // We have to collect since `which` requires that the regex outlives its
+                        // parameters, and the dir is local while we return the iterator.
                         .collect::<Vec<_>>()
                 })
+                .chain(find_all_minor(implementation, version_request, &dir_clone))
                 .filter(|path| !is_windows_store_shim(path))
                 .inspect(|path| trace!("Found possible Python executable: {}", path.display()))
                 .chain(
@@ -408,6 +411,71 @@ fn python_executables_from_search_path<'a>(
                         .flatten(),
                 )
         })
+}
+
+/// Find all acceptable `python3.x` minor versions.
+///
+/// For example, let's say `python` and `python3` are Python 3.10. When a user requests `>= 3.11`,
+/// we still need to find a `python3.12` in PATH.
+fn find_all_minor(
+    implementation: Option<&ImplementationName>,
+    version_request: &VersionRequest,
+    dir: &Path,
+) -> impl Iterator<Item = PathBuf> {
+    match version_request {
+        VersionRequest::Any | VersionRequest::Major(_) | VersionRequest::Range(_) => {
+            let regex = if let Some(implementation) = implementation {
+                Regex::new(&format!(
+                    r"^({}|python3)\.(?<minor>\d\d?){}$",
+                    regex::escape(&implementation.to_string()),
+                    regex::escape(EXE_SUFFIX)
+                ))
+                .unwrap()
+            } else {
+                Regex::new(&format!(
+                    r"^python3\.(?<minor>\d\d?){}$",
+                    regex::escape(EXE_SUFFIX)
+                ))
+                .unwrap()
+            };
+            let all_minors = fs_err::read_dir(dir)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|entry| entry.path())
+                .filter(move |path| {
+                    let Some(filename) = path.file_name() else {
+                        return false;
+                    };
+                    let Some(filename) = filename.to_str() else {
+                        return false;
+                    };
+                    let Some(captures) = regex.captures(filename) else {
+                        return false;
+                    };
+
+                    // Filter out interpreter we already know have a too low minor version.
+                    let minor = captures["minor"].parse().ok();
+                    if let Some(minor) = minor {
+                        // Optimization: Skip generally unsupported Python versions without querying.
+                        if minor < 7 {
+                            return false;
+                        }
+                        // Optimization 2: Skip excluded Python (minor) versions without querying.
+                        if !version_request.matches_major_minor(3, minor) {
+                            return false;
+                        }
+                    }
+                    true
+                })
+                .filter(|path| is_executable(path))
+                .collect::<Vec<_>>();
+            Either::Left(all_minors.into_iter())
+        }
+        VersionRequest::MajorMinor(_, _) | VersionRequest::MajorMinorPatch(_, _, _) => {
+            Either::Right(iter::empty())
+        }
+    }
 }
 
 /// Lazily iterate over all discoverable Python interpreters.
@@ -439,9 +507,8 @@ fn python_interpreters_from_executables<'a>(
             .map(|interpreter| (source, interpreter))
             .inspect(|(source, interpreter)| {
                 debug!(
-                    "Found {} {} at `{}` ({source})",
-                    LenientImplementationName::from(interpreter.implementation_name()),
-                    interpreter.python_full_version(),
+                    "Found `{}` at `{}` ({source})",
+                    interpreter.key(),
                     path.display()
                 );
             })
@@ -829,7 +896,7 @@ fn warn_on_unsupported_python(interpreter: &Interpreter) {
     // Warn on usage with an unsupported Python version
     if interpreter.python_tuple() < (3, 8) {
         warn_user_once!(
-            "uv is only compatible with Python 3.8+, found Python {}.",
+            "uv is only compatible with Python >=3.8, found Python {}",
             interpreter.python_version()
         );
     }
@@ -855,12 +922,13 @@ fn warn_on_unsupported_python(interpreter: &Interpreter) {
 pub(crate) fn is_windows_store_shim(path: &Path) -> bool {
     use std::os::windows::fs::MetadataExt;
     use std::os::windows::prelude::OsStrExt;
-    use winapi::um::fileapi::{CreateFileW, OPEN_EXISTING};
-    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-    use winapi::um::ioapiset::DeviceIoControl;
-    use winapi::um::winbase::{FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT};
-    use winapi::um::winioctl::FSCTL_GET_REPARSE_POINT;
-    use winapi::um::winnt::{FILE_ATTRIBUTE_REPARSE_POINT, MAXIMUM_REPARSE_DATA_BUFFER_SIZE};
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileW, FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_OPEN_REPARSE_POINT, MAXIMUM_REPARSE_DATA_BUFFER_SIZE, OPEN_EXISTING,
+    };
+    use windows_sys::Win32::System::Ioctl::FSCTL_GET_REPARSE_POINT;
+    use windows_sys::Win32::System::IO::DeviceIoControl;
 
     // The path must be absolute.
     if !path.is_absolute() {
@@ -920,7 +988,7 @@ pub(crate) fn is_windows_store_shim(path: &Path) -> bool {
             std::ptr::null_mut(),
             OPEN_EXISTING,
             FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-            std::ptr::null_mut(),
+            0,
         )
     };
 
@@ -1028,6 +1096,16 @@ impl PythonRequest {
         if value_as_path.is_file() {
             return Self::File(value_as_path);
         }
+
+        // e.g. path/to/python on Windows, where path/to/python is the true path
+        #[cfg(windows)]
+        if value_as_path.extension().is_none() {
+            let value_as_path = value_as_path.with_extension(EXE_SUFFIX);
+            if value_as_path.is_file() {
+                return Self::File(value_as_path);
+            }
+        }
+
         // During unit testing, we cannot change the working directory used by std
         // so we perform a check relative to the mock working directory. Ideally we'd
         // remove this code and use tests at the CLI level so we can change the real
@@ -1175,6 +1253,12 @@ impl PythonRequest {
     }
 }
 
+impl PythonSource {
+    pub fn is_managed(&self) -> bool {
+        matches!(self, Self::Managed)
+    }
+}
+
 impl PythonPreference {
     fn allows(self, source: PythonSource) -> bool {
         // If not dealing with a system interpreter source, we don't care about the preference
@@ -1187,7 +1271,7 @@ impl PythonPreference {
 
         match self {
             PythonPreference::OnlyManaged => matches!(source, PythonSource::Managed),
-            Self::Managed | Self::System | Self::Installed => matches!(
+            Self::Managed | Self::System => matches!(
                 source,
                 PythonSource::Managed | PythonSource::SearchPath | PythonSource::PyLauncher
             ),
@@ -1210,7 +1294,7 @@ impl PythonPreference {
     }
 
     pub(crate) fn allows_managed(self) -> bool {
-        matches!(self, Self::Managed | Self::OnlyManaged | Self::Installed)
+        matches!(self, Self::Managed | Self::OnlyManaged)
     }
 }
 
@@ -1518,7 +1602,7 @@ impl PythonPreference {
     fn sources(self) -> &'static [&'static str] {
         match self {
             Self::OnlyManaged => &["managed installations"],
-            Self::Managed | Self::Installed | Self::System => {
+            Self::Managed | Self::System => {
                 if cfg!(windows) {
                     &["managed installations", "system path", "`py` launcher"]
                 } else {
@@ -1596,11 +1680,12 @@ mod tests {
     use assert_fs::{prelude::*, TempDir};
     use test_log::test;
 
-    use super::Error;
     use crate::{
         discovery::{PythonRequest, VersionRequest},
         implementation::ImplementationName,
     };
+
+    use super::Error;
 
     #[test]
     fn interpreter_request_from_str() {
@@ -1641,6 +1726,14 @@ mod tests {
             PythonRequest::Implementation(ImplementationName::PyPy)
         );
         assert_eq!(
+            PythonRequest::parse("graalpy"),
+            PythonRequest::Implementation(ImplementationName::GraalPy)
+        );
+        assert_eq!(
+            PythonRequest::parse("gp"),
+            PythonRequest::Implementation(ImplementationName::GraalPy)
+        );
+        assert_eq!(
             PythonRequest::parse("cp"),
             PythonRequest::Implementation(ImplementationName::CPython)
         );
@@ -1655,6 +1748,20 @@ mod tests {
             PythonRequest::parse("pp310"),
             PythonRequest::ImplementationVersion(
                 ImplementationName::PyPy,
+                VersionRequest::from_str("3.10").unwrap()
+            )
+        );
+        assert_eq!(
+            PythonRequest::parse("graalpy3.10"),
+            PythonRequest::ImplementationVersion(
+                ImplementationName::GraalPy,
+                VersionRequest::from_str("3.10").unwrap()
+            )
+        );
+        assert_eq!(
+            PythonRequest::parse("gp310"),
+            PythonRequest::ImplementationVersion(
+                ImplementationName::GraalPy,
                 VersionRequest::from_str("3.10").unwrap()
             )
         );
@@ -1676,6 +1783,20 @@ mod tests {
             PythonRequest::parse("pypy310"),
             PythonRequest::ImplementationVersion(
                 ImplementationName::PyPy,
+                VersionRequest::from_str("3.10").unwrap()
+            )
+        );
+        assert_eq!(
+            PythonRequest::parse("graalpy@3.10"),
+            PythonRequest::ImplementationVersion(
+                ImplementationName::GraalPy,
+                VersionRequest::from_str("3.10").unwrap()
+            )
+        );
+        assert_eq!(
+            PythonRequest::parse("graalpy310"),
+            PythonRequest::ImplementationVersion(
+                ImplementationName::GraalPy,
                 VersionRequest::from_str("3.10").unwrap()
             )
         );
@@ -1748,6 +1869,18 @@ mod tests {
             )
             .to_canonical_string(),
             "pypy@3.10"
+        );
+        assert_eq!(
+            PythonRequest::Implementation(ImplementationName::GraalPy).to_canonical_string(),
+            "graalpy"
+        );
+        assert_eq!(
+            PythonRequest::ImplementationVersion(
+                ImplementationName::GraalPy,
+                VersionRequest::from_str("3.10").unwrap()
+            )
+            .to_canonical_string(),
+            "graalpy@3.10"
         );
 
         let tempdir = TempDir::new().unwrap();

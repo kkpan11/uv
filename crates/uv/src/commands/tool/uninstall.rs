@@ -21,13 +21,13 @@ pub(crate) async fn uninstall(
     printer: Printer,
 ) -> Result<ExitStatus> {
     if preview.is_disabled() {
-        warn_user_once!("`uv tool uninstall` is experimental and may change without warning.");
+        warn_user_once!("`uv tool uninstall` is experimental and may change without warning");
     }
 
     let installed_tools = InstalledTools::from_settings()?.init()?;
     let _lock = match installed_tools.acquire_lock() {
         Ok(lock) => lock,
-        Err(uv_tool::Error::IO(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+        Err(uv_tool::Error::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => {
             if let Some(name) = name {
                 bail!("`{name}` is not installed");
             }
@@ -37,6 +37,7 @@ pub(crate) async fn uninstall(
         Err(err) => return Err(err.into()),
     };
 
+    let mut dangling = false;
     let mut entrypoints = if let Some(name) = name {
         let Some(receipt) = installed_tools.get_tool_receipt(&name)? else {
             // If the tool is not installed, attempt to remove the environment anyway.
@@ -48,7 +49,7 @@ pub(crate) async fn uninstall(
                     )?;
                     return Ok(ExitStatus::Success);
                 }
-                Err(uv_tool::Error::IO(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+                Err(uv_tool::Error::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => {
                     bail!("`{name}` is not installed");
                 }
                 Err(err) => {
@@ -61,6 +62,26 @@ pub(crate) async fn uninstall(
     } else {
         let mut entrypoints = vec![];
         for (name, receipt) in installed_tools.tools()? {
+            let Ok(receipt) = receipt else {
+                // If the tool is not installed properly, attempt to remove the environment anyway.
+                match installed_tools.remove_environment(&name) {
+                    Ok(()) => {
+                        dangling = true;
+                        writeln!(
+                            printer.stderr(),
+                            "Removed dangling environment for `{name}`"
+                        )?;
+                        continue;
+                    }
+                    Err(uv_tool::Error::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+                        bail!("`{name}` is not installed");
+                    }
+                    Err(err) => {
+                        return Err(err.into());
+                    }
+                }
+            };
+
             entrypoints.extend(uninstall_tool(&name, &receipt, &installed_tools).await?);
         }
         entrypoints
@@ -68,7 +89,10 @@ pub(crate) async fn uninstall(
     entrypoints.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 
     if entrypoints.is_empty() {
-        writeln!(printer.stderr(), "Nothing to uninstall")?;
+        // If we removed at least one dangling environment, there's no need to summarize.
+        if !dangling {
+            writeln!(printer.stderr(), "Nothing to uninstall")?;
+        }
         return Ok(ExitStatus::Success);
     }
 
