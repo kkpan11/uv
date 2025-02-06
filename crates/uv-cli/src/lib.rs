@@ -2518,6 +2518,13 @@ pub struct InitArgs {
     #[arg(long, conflicts_with = "script")]
     pub name: Option<PackageName>,
 
+    /// Only create a `pyproject.toml`.
+    ///
+    /// Disables creating extra files like `README.md`, the `src/` tree, `.python-version` files,
+    /// etc.
+    #[arg(long, conflicts_with = "script")]
+    pub bare: bool,
+
     /// Create a virtual project, rather than a package.
     ///
     /// This option is deprecated and will be removed in a future release.
@@ -2574,8 +2581,12 @@ pub struct InitArgs {
     pub r#script: bool,
 
     /// Set the project description.
-    #[arg(long, conflicts_with = "script")]
+    #[arg(long, conflicts_with = "script", overrides_with = "no_description")]
     pub description: Option<String>,
+
+    /// Disable the description for the project.
+    #[arg(long, conflicts_with = "script", overrides_with = "description")]
+    pub no_description: bool,
 
     /// Initialize a version control system for the project.
     ///
@@ -2618,6 +2629,12 @@ pub struct InitArgs {
     /// discovered Python interpreter, which will cause subsequent uv commands to use that version.
     #[arg(long)]
     pub no_pin_python: bool,
+
+    /// Create a `.python-version` file for the project.
+    ///
+    /// This is the default.
+    #[arg(long, hide = true)]
+    pub pin_python: bool,
 
     /// Avoid discovering a workspace and create a standalone project.
     ///
@@ -2691,7 +2708,7 @@ pub struct RunArgs {
     /// Include dependencies from the specified dependency group.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("only_group"))]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub group: Vec<GroupName>,
 
     /// Exclude dependencies from the specified dependency group.
@@ -2703,7 +2720,7 @@ pub struct RunArgs {
     /// Exclude dependencies from default groups.
     ///
     /// `--group` can be used to include specific groups.
-    #[arg(long, conflicts_with_all = ["no_group", "only_group"])]
+    #[arg(long)]
     pub no_default_groups: bool,
 
     /// Only include dependencies from the specified dependency group.
@@ -2711,13 +2728,13 @@ pub struct RunArgs {
     /// The project itself will also be omitted.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("group"))]
+    #[arg(long, conflicts_with_all = ["group", "dev", "all_groups"])]
     pub only_group: Vec<GroupName>,
 
     /// Include dependencies from all dependency groups.
     ///
     /// `--no-group` can be used to exclude specific groups.
-    #[arg(long, conflicts_with_all = [ "group", "only_group" ])]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub all_groups: bool,
 
     /// Run a Python module.
@@ -2731,7 +2748,7 @@ pub struct RunArgs {
     /// Omit other dependencies. The project itself will also be omitted.
     ///
     /// This option is an alias for `--only-group dev`.
-    #[arg(long, conflicts_with("no_dev"))]
+    #[arg(long, conflicts_with_all = ["group", "all_groups", "no_dev"])]
     pub only_dev: bool,
 
     /// Install any editable dependencies, including the project and any workspace members, as
@@ -2804,6 +2821,19 @@ pub struct RunArgs {
     /// layered in a second environment.
     #[arg(long)]
     pub isolated: bool,
+
+    /// Prefer the active virtual environment over the project's virtual environment.
+    ///
+    /// If the project virtual environment is active or no virtual environment is active, this has
+    /// no effect.
+    #[arg(long, overrides_with = "no_active")]
+    pub active: bool,
+
+    /// Prefer project's virtual environment over an active environment.
+    ///
+    /// This is the default behavior.
+    #[arg(long, overrides_with = "active", hide = true)]
+    pub no_active: bool,
 
     /// Avoid syncing the virtual environment.
     ///
@@ -2950,7 +2980,7 @@ pub struct SyncArgs {
     /// Omit other dependencies. The project itself will also be omitted.
     ///
     /// This option is an alias for `--only-group dev`.
-    #[arg(long, conflicts_with("no_dev"))]
+    #[arg(long, conflicts_with_all = ["group", "all_groups", "no_dev"])]
     pub only_dev: bool,
 
     /// Include dependencies from the specified dependency group.
@@ -2959,7 +2989,7 @@ pub struct SyncArgs {
     /// `tool.uv.conflicts`, uv will report an error.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("only_group"))]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub group: Vec<GroupName>,
 
     /// Exclude dependencies from the specified dependency group.
@@ -2971,7 +3001,7 @@ pub struct SyncArgs {
     /// Exclude dependencies from default groups.
     ///
     /// `--group` can be used to include specific groups.
-    #[arg(long, conflicts_with_all = ["no_group", "only_group"])]
+    #[arg(long)]
     pub no_default_groups: bool,
 
     /// Only include dependencies from the specified dependency group.
@@ -2979,13 +3009,13 @@ pub struct SyncArgs {
     /// The project itself will also be omitted.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("group"))]
+    #[arg(long, conflicts_with_all = ["group", "dev", "all_groups"])]
     pub only_group: Vec<GroupName>,
 
     /// Include dependencies from all dependency groups.
     ///
     /// `--no-group` can be used to exclude specific groups.
-    #[arg(long, conflicts_with_all = [ "group", "only_group" ])]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub all_groups: bool,
 
     /// Install any editable dependencies, including the project and any workspace members, as
@@ -3003,6 +3033,19 @@ pub struct SyncArgs {
     /// Perform an exact sync, removing extraneous packages.
     #[arg(long, overrides_with("inexact"), hide = true)]
     pub exact: bool,
+
+    /// Prefer the active virtual environment over the project's virtual environment.
+    ///
+    /// If the project virtual environment is active or no virtual environment is active, this has
+    /// no effect.
+    #[arg(long, overrides_with = "no_active")]
+    pub active: bool,
+
+    /// Prefer project's virtual environment over an active environment.
+    ///
+    /// This is the default behavior.
+    #[arg(long, overrides_with = "active", hide = true)]
+    pub no_active: bool,
 
     /// Do not install the current project.
     ///
@@ -3247,6 +3290,19 @@ pub struct AddArgs {
     #[arg(long, env = EnvVars::UV_FROZEN, value_parser = clap::builder::BoolishValueParser::new(), conflicts_with = "locked")]
     pub frozen: bool,
 
+    /// Prefer the active virtual environment over the project's virtual environment.
+    ///
+    /// If the project virtual environment is active or no virtual environment is active, this has
+    /// no effect.
+    #[arg(long, overrides_with = "no_active")]
+    pub active: bool,
+
+    /// Prefer project's virtual environment over an active environment.
+    ///
+    /// This is the default behavior.
+    #[arg(long, overrides_with = "active", hide = true)]
+    pub no_active: bool,
+
     #[command(flatten)]
     pub installer: ResolverInstallerArgs,
 
@@ -3312,6 +3368,19 @@ pub struct RemoveArgs {
     /// Avoid syncing the virtual environment after re-locking the project.
     #[arg(long, env = EnvVars::UV_NO_SYNC, value_parser = clap::builder::BoolishValueParser::new(), conflicts_with = "frozen")]
     pub no_sync: bool,
+
+    /// Prefer the active virtual environment over the project's virtual environment.
+    ///
+    /// If the project virtual environment is active or no virtual environment is active, this has
+    /// no effect.
+    #[arg(long, overrides_with = "no_active")]
+    pub active: bool,
+
+    /// Prefer project's virtual environment over an active environment.
+    ///
+    /// This is the default behavior.
+    #[arg(long, overrides_with = "active", hide = true)]
+    pub no_active: bool,
 
     /// Assert that the `uv.lock` will remain unchanged.
     ///
@@ -3389,7 +3458,7 @@ pub struct TreeArgs {
     /// Omit other dependencies. The project itself will also be omitted.
     ///
     /// This option is an alias for `--only-group dev`.
-    #[arg(long, conflicts_with("no_dev"))]
+    #[arg(long, conflicts_with_all = ["group", "all_groups", "no_dev"])]
     pub only_dev: bool,
 
     /// Omit the development dependency group.
@@ -3401,7 +3470,7 @@ pub struct TreeArgs {
     /// Include dependencies from the specified dependency group.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("only_group"))]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub group: Vec<GroupName>,
 
     /// Exclude dependencies from the specified dependency group.
@@ -3413,7 +3482,7 @@ pub struct TreeArgs {
     /// Exclude dependencies from default groups.
     ///
     /// `--group` can be used to include specific groups.
-    #[arg(long, conflicts_with_all = ["no_group", "only_group"])]
+    #[arg(long)]
     pub no_default_groups: bool,
 
     /// Only include dependencies from the specified dependency group.
@@ -3421,13 +3490,13 @@ pub struct TreeArgs {
     /// The project itself will also be omitted.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("group"))]
+    #[arg(long, conflicts_with_all = ["group", "dev", "all_groups"])]
     pub only_group: Vec<GroupName>,
 
     /// Include dependencies from all dependency groups.
     ///
     /// `--no-group` can be used to exclude specific groups.
-    #[arg(long, conflicts_with_all = [ "group", "only_group" ])]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub all_groups: bool,
 
     /// Assert that the `uv.lock` will remain unchanged.
@@ -3563,13 +3632,13 @@ pub struct ExportArgs {
     /// Omit other dependencies. The project itself will also be omitted.
     ///
     /// This option is an alias for `--only-group dev`.
-    #[arg(long, conflicts_with("no_dev"))]
+    #[arg(long, conflicts_with_all = ["group", "all_groups", "no_dev"])]
     pub only_dev: bool,
 
     /// Include dependencies from the specified dependency group.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("only_group"))]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub group: Vec<GroupName>,
 
     /// Exclude dependencies from the specified dependency group.
@@ -3581,7 +3650,7 @@ pub struct ExportArgs {
     /// Exclude dependencies from default groups.
     ///
     /// `--group` can be used to include specific groups.
-    #[arg(long, conflicts_with_all = ["no_group", "only_group"])]
+    #[arg(long)]
     pub no_default_groups: bool,
 
     /// Only include dependencies from the specified dependency group.
@@ -3589,13 +3658,13 @@ pub struct ExportArgs {
     /// The project itself will also be omitted.
     ///
     /// May be provided multiple times.
-    #[arg(long, conflicts_with("group"))]
+    #[arg(long, conflicts_with_all = ["group", "dev", "all_groups"])]
     pub only_group: Vec<GroupName>,
 
     /// Include dependencies from all dependency groups.
     ///
     /// `--no-group` can be used to exclude specific groups.
-    #[arg(long, conflicts_with_all = [ "group", "only_group" ])]
+    #[arg(long, conflicts_with_all = ["only_group", "only_dev"])]
     pub all_groups: bool,
 
     /// Exclude the comment header at the top of the generated output file.

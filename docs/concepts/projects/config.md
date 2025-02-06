@@ -190,8 +190,10 @@ To target this environment, you'd export `UV_PROJECT_ENVIRONMENT=/usr/local`.
 
 !!! note
 
-    uv does not read the `VIRTUAL_ENV` environment variable during project operations. A warning
-    will be displayed if `VIRTUAL_ENV` is set to a different path than the project's environment.
+    By default, uv does not read the `VIRTUAL_ENV` environment variable during project operations.
+    A warning will be displayed if `VIRTUAL_ENV` is set to a different path than the project's
+    environment. The `--active` flag can be used to opt-in to respecting `VIRTUAL_ENV`. The
+    `--no-active` flag can be used to silence the warning.
 
 ## Limited resolution environments
 
@@ -317,7 +319,7 @@ You could run the following sequence of commands to sync `flash-attn`:
 
 ```console
 $ uv venv
-$ uv pip install torch
+$ uv pip install torch setuptools
 $ uv sync
 ```
 

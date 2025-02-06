@@ -10,8 +10,8 @@ use tracing::debug;
 use uv_cache::Cache;
 use uv_client::Connectivity;
 use uv_configuration::{
-    Concurrency, DevGroupsManifest, EditableMode, ExtrasSpecification, InstallOptions, PreviewMode,
-    TrustedHost,
+    Concurrency, DevGroupsSpecification, EditableMode, ExtrasSpecification, InstallOptions,
+    PreviewMode, TrustedHost,
 };
 use uv_fs::Simplified;
 use uv_normalize::DEV_DEPENDENCIES;
@@ -43,6 +43,7 @@ pub(crate) async fn remove(
     project_dir: &Path,
     locked: bool,
     frozen: bool,
+    active: Option<bool>,
     no_sync: bool,
     packages: Vec<PackageName>,
     dependency_type: DependencyType,
@@ -209,6 +210,7 @@ pub(crate) async fn remove(
                     allow_insecure_host,
                     &install_mirrors,
                     no_config,
+                    active,
                     cache,
                     printer,
                 )
@@ -228,6 +230,7 @@ pub(crate) async fn remove(
                     native_tls,
                     allow_insecure_host,
                     no_config,
+                    active,
                     cache,
                     printer,
                 )
@@ -330,7 +333,7 @@ pub(crate) async fn remove(
         target,
         venv,
         &extras,
-        &DevGroupsManifest::from_defaults(defaults),
+        &DevGroupsSpecification::default().with_defaults(defaults),
         EditableMode::Editable,
         install_options,
         Modifications::Exact,

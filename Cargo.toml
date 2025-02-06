@@ -73,7 +73,7 @@ uv-workspace = { path = "crates/uv-workspace" }
 anstream = { version = "0.6.15" }
 anyhow = { version = "1.0.89" }
 arcstr = { version = "1.2.0" }
-astral-tokio-tar = { git = "https://github.com/astral-sh/tokio-tar", rev = "efeaea927c7a40ee66121de2e1bebfd5d7a4a602" }
+astral-tokio-tar = { version = "0.5.0" }
 async-channel = { version = "2.3.1" }
 async-compression = { version = "0.4.12", features = ["bzip2", "gzip", "xz", "zstd"] }
 async-trait = { version = "0.1.82" }
@@ -85,7 +85,6 @@ base64 = { version = "0.22.1" }
 bitflags = { version = "2.6.0" }
 boxcar = { version = "0.2.5" }
 bytecheck = { version = "0.8.0" }
-cachedir = { version = "0.3.1" }
 cargo-util = { version = "0.2.14" }
 clap = { version = "4.5.17", features = ["derive", "env", "string", "wrap_help"] }
 clap_complete_command = { version = "0.6.1" }

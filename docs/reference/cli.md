@@ -72,7 +72,11 @@ uv run [OPTIONS] [COMMAND]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt><code>--all-extras</code></dt><dd><p>Include all optional dependencies.</p>
+<dl class="cli-reference"><dt><code>--active</code></dt><dd><p>Prefer the active virtual environment over the project&#8217;s virtual environment.</p>
+
+<p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
+
+</dd><dt><code>--all-extras</code></dt><dd><p>Include all optional dependencies.</p>
 
 <p>Optional dependencies are defined via <code>project.optional-dependencies</code> in a <code>pyproject.toml</code>.</p>
 
@@ -551,6 +555,10 @@ uv init [OPTIONS] [PATH]
 
 <li><code>none</code>:  Do not infer the author information</li>
 </ul>
+</dd><dt><code>--bare</code></dt><dd><p>Only create a <code>pyproject.toml</code>.</p>
+
+<p>Disables creating extra files like <code>README.md</code>, the <code>src/</code> tree, <code>.python-version</code> files, etc.</p>
+
 </dd><dt><code>--build-backend</code> <i>build-backend</i></dt><dd><p>Initialize a build-backend of choice for the project.</p>
 
 <p>Implicitly sets <code>--package</code>.</p>
@@ -628,6 +636,8 @@ uv init [OPTIONS] [PATH]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt><code>--no-description</code></dt><dd><p>Disable the description for the project</p>
+
 </dd><dt><code>--no-package</code></dt><dd><p>Do not set up the project to be built as a Python package.</p>
 
 <p>Does not include a <code>[build-system]</code> for the project.</p>
@@ -754,7 +764,11 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt><code>--allow-insecure-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt><code>--active</code></dt><dd><p>Prefer the active virtual environment over the project&#8217;s virtual environment.</p>
+
+<p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
+
+</dd><dt><code>--allow-insecure-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -1123,7 +1137,11 @@ uv remove [OPTIONS] <PACKAGES>...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt><code>--allow-insecure-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt><code>--active</code></dt><dd><p>Prefer the active virtual environment over the project&#8217;s virtual environment.</p>
+
+<p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
+
+</dd><dt><code>--allow-insecure-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -1460,7 +1478,11 @@ uv sync [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt><code>--all-extras</code></dt><dd><p>Include all optional dependencies.</p>
+<dl class="cli-reference"><dt><code>--active</code></dt><dd><p>Prefer the active virtual environment over the project&#8217;s virtual environment.</p>
+
+<p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
+
+</dd><dt><code>--all-extras</code></dt><dd><p>Include all optional dependencies.</p>
 
 <p>When two or more extras are declared as conflicting in <code>tool.uv.conflicts</code>, using this flag will always result in an error.</p>
 
